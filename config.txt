@@ -1,0 +1,36 @@
+~~~~~~~~~~~~ datasets ~~~~~~~~~~~~ 
+Description: List of the datasets that are available in the software.
+To add your own dataset, add the name of the new dataset to the list, and create a data-fetcher function in the file "data_loaders.py".
+Don't forget to add to connect your new function to the dataset name in the big if/else in "data_loaders.py".
+Make sure that there is no comma (',') in the dataset name or the config reader will interpret it as a separation between two entries.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ - datasets = [winequality-red, abalone, airfoil self-noise, satellite, coil-20, coil-20 37% missing values, coil-20 7% missing values, blob 25, swissroll, s-curve, s-curve 5k, double-S, double-S 5k, bundled coils, spread coils, Hastie 10, digits 8x8, forest covtype, housing (download if not cached), RNA-seq 3k, RNA-seq 6k, gestures, plant, anuran]
+ - default_N = 2000 # how many observations are taken by default when opening a dataset. Only used by some datasets
+
+~~~~~~~~~~~~ DR algorithms ~~~~~~~~~~~~ 
+Description: List of the algorithms that can are available for DR.
+To add you own algorithm:
+1/ add the name of your algorithm in the list DR_algorithms defined just below this description.
+2/ Create a class inside the "DR_algorithms" folder and make it inherit the DR_algorithm class.
+In your created class, build the hyperparameters in __init__() by taking example from the existing algorithms, then fill the fit() and transform() function without changing their signatures from 
+the DR_algorithm class.
+3/ In get_DR_algorithm() in the file DR_algorithm.py, add a case to the big if/else if the name of your newly added class. The name should be
+identical to the one written here in 1/. In this if case, import the new file and return an instance of the new class. (take other existing cases as an example)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ - DR_algorithms = [PCA, MDS, SQuaD-MDS, SQuaD-MDS + tSNE, tSNE, multiscale-tSNE, UMAP, FItSNE, cat-SNE, isomap, Laplacian eigenmaps, LLE, autoencoder]
+
+
+~~~~~~~~~~~~ GUI config ~~~~~~~~~~
+Description: general GUI things.
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+ - windowed            = False    #  If passing arguments "-w" then windowed is set to True. 
+ - windowed_resolution = 1024x640 #  Changing this could lead to a strange-looking user interface
+ - printable           = False    #  White background. If passing "-p" then printable is set to True.
+ - main_screen_key     = x        #  key to access the main screen
+ - relQA_screen_key    = c        #  key to access the relative QA screen
+ - absQA_screen_key    = v        #  key to access the absolute QA screen
+ - regr_var_color_with_span = True  #  how the color code for regression variables is computed. if True then a value between 0 and 1 is generated for Y_i using (Y_i  -  min(Y)) / (max(Y) - min(Y) + epsilon). if False: the denominator becomes (5*std(Y)+epsilon)
+
