@@ -1,5 +1,5 @@
 from engine.gui.container import Container
-from engine.gui.scatterplot import Explainable_scatterplot, Scatterplot, Variable_weights_bundle
+from engine.gui.scatterplot import Explained_scatterplot, Axis_explained
 from engine.gui.window import Window
 from engine.gui.selector import  Button, Mutex_with_title, String_selector, Number_selector, Mutex_choice, Scrollable_bundle
 from engine.gui.listener import Listener
@@ -13,12 +13,13 @@ class Main_screen():
         self.manager = manager
         self.color = theme["color"]; self.background_color = theme["background"]
         self.eight_colors = random_colors(8)
-        self.main_view   = Container((0,0), (1., 1.), "main_area", window, manager.uid_generator, color=theme["color"], background_color=theme["background"], filled=True)
-        self.main_view.add_leaf(Explainable_scatterplot("the scatterplot", pos_pct=(0., 0.), dim_pct=(0.7,1.), parent=self.main_view, uid_generator=manager.uid_generator, color=self.color, manager=manager))
-        # variables_container = Container((0.71, 0.), (0.29, 1.), "variables container", self.main_view, manager.uid_generator, show_border=True)
-        # variables_container.add_leaf(Variable_weights_bundle("ax1", (0.,0.), (1.,0.5,), variables_container, manager.uid_generator, color=self.color, manager=manager))
-        # variables_container.add_leaf(Variable_weights_bundle("ax2", (0.,0.5), (1.,0.5,), variables_container, manager.uid_generator, color=self.color, manager=manager))
-        # self.main_view.add_container(variables_container)
+        self.main_view   = Container((0,0), (1., 1.), "main_area", window, manager.uid_generator, color=theme["color"], background_color=theme["background"], filled=False)
+        self.main_view.add_leaf(Explained_scatterplot("the scatterplot", pos_pct=(0., 0.), dim_pct=(0.7,1.), parent=self.main_view, uid_generator=manager.uid_generator, color=self.color, manager=manager))
+
+        cont_features = Container((0.7,0.), (0.3, 1.), "features area", self.main_view, manager.uid_generator, color=theme["color"], background_color=theme["background"])
+        cont_features.add_leaf(Axis_explained("ax1", (0., 0.), (1., 0.495), parent=cont_features, uid_generator=manager.uid_generator, color=self.color, manager=manager))
+        cont_features.add_leaf(Axis_explained("ax2", (0., 0.505), (1., 0.495), parent=cont_features, uid_generator=manager.uid_generator, color=self.color, manager=manager))
+        self.main_view.add_container(cont_features)
         window.add_container(self.main_view)
 
 
