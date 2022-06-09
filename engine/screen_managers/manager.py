@@ -6,7 +6,7 @@ class Manager():
         self.to_redraw_on_next_iter = []
         self.asked_a_redraw         = False
         self.active                 = initial_state
-        self.main_window = None
+        self.main_window  = None
         # self.pressed_keys           = {K_CTRL : False}
 
     def sleep(self):
@@ -21,6 +21,7 @@ class Manager():
         self.active = False
 
     def get_notified(self, event_class, id, value, to_redraw = []):
+
         pass
 
     def ask_redraw(self, element):

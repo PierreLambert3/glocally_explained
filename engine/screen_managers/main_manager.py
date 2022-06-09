@@ -25,8 +25,9 @@ class Main_manager(Manager):
         '''
         things proper to this software
         '''
-        self.scatterplot_redraw_listener = Listener(OPTIMISATION_UPDATE, [self])
+        self.scatterplot_redraw_listener = Listener(REDRAW_THINGS, [self])
         self.main_scatterplot = self.main_view.leaves[0]
+        self.ctrl_pressed = False
 
 
     def wake_up(self, prev_manager):
@@ -34,17 +35,27 @@ class Main_manager(Manager):
 
     def get_notified(self, event_class, id, value, to_redraw = []):
         with self.lock:
-            if event_class == OPTIMISATION_UPDATE:
-                self.optim_update(value)
+            if event_class == REDRAW_THINGS:
+                self.redraw_things(value)
+            elif event_class == CTRL_KEY_CHANGE:
+                is_pressed, pos = value
+                self.ctrl_pressed = is_pressed
+            elif event_class == SCATTERPLOT_LEFT_CLICK:
+                print("left click")
+            elif event_class == SCATTERPLOT_RIGHT_CLICK:
+                print("right click")
+            elif event_class == SCATTERPLOT_HOVER:
+                print("hover")
             else:
                 print("unrecognised event received by main_manager: ", event_class, "  (see correspondance in event_ids.py)")
+
 
     def on_awaited_key_press(self, to_redraw, pressed_keys, pressed_special_keys):
         if pressed_keys[0] == 'o':
             print("pressed o")
         return False
 
-    def optim_update(self, value):
+    def redraw_things(self, value):
         scatterplot = self.main_scatterplot
         X, colours = value
         scatterplot.set_points(X, colours)

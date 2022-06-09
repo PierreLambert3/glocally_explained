@@ -124,9 +124,6 @@ class Scatterplot(Element):
                 return True
         return False
 
-
-
-
     def propagate_Lmouse_down(self, to_redraw, windows, mouse_pos, mouse_button_status, pressed_special_keys, awaiting_mouse_move, awaiting_mouse_release):
         print("clicked in the")
         if self.point_is_within_plot(mouse_pos):
@@ -139,7 +136,6 @@ class Scatterplot(Element):
             self.on_Rclick_listener.notify((mouse_pos, windows), to_redraw)
             return True
         return False
-
 
     def propagate_hover(self, to_redraw, mouse_pos, pressed_special_keys, awaiting_mouse_move):
         if self.point_is_within_plot(mouse_pos):
@@ -156,7 +152,10 @@ class Scatterplot(Element):
     def on_awaited_key_press(self, to_redraw, pressed_keys, pressed_special_keys):
         return True
 
-
 class Explainable_scatterplot(Scatterplot):
     def __init__(self, name, pos_pct, dim_pct, parent, uid_generator, color, manager):
-        super(Explainable_scatterplot, self).__init__(pos_pct, dim_pct, name, parent, uid=uid_generator.get(), color=color)
+        super(Explainable_scatterplot, self).__init__(pos_pct, dim_pct, name, parent, uid_generator=uid_generator, color=color, manager=manager)
+
+class Variable_weights_bundle(Element):
+    def __init__(self, name, pos_pct, dim_pct, parent, uid_generator, color, manager):
+        super(Variable_weights_bundle, self).__init__(pos_pct, dim_pct, name, parent, uid=uid_generator.get(), color=color)

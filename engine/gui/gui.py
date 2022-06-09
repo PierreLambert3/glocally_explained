@@ -92,10 +92,10 @@ class Gui:
             if usr_events.ctrl_pressed:
                 if not self.ctrl_pressed:
                     self.ctrl_pressed = True
-                    self.current_manager.get_notified(CTRL_KEY_CHANGE, True,(True, usr_events.curr_mouse_pos), to_redraw)
+                    self.current_manager.get_notified(CTRL_KEY_CHANGE, 0,(True, usr_events.curr_mouse_pos), to_redraw)
             elif self.ctrl_pressed: # ctrl released
                 self.ctrl_pressed = False
-                self.current_manager.get_notified(CTRL_KEY_CHANGE, False, (False, usr_events.curr_mouse_pos), to_redraw)
+                self.current_manager.get_notified(CTRL_KEY_CHANGE, 0, (False, usr_events.curr_mouse_pos), to_redraw)
 
             # manager asked for some redraws but didn't have to_redraw array (occurs when notified by another thread)
             if self.current_manager.asked_a_redraw:

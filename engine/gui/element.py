@@ -111,6 +111,10 @@ class Element:
             self.background_color = background_color
 
     def set_initial_positions(self, position, dimension):
+        print("~~~~~~~~~~~~~~~~éé")
+        print(self.name)
+        print(self.parent.dim, self.parent.dim_pct)
+        print(self.dim, self.dim_pct)
         self.dim_pct = dimension
         self.dim     = (int(self.parent.dim[0]*self.dim_pct[0]), int(self.parent.dim[1]*self.dim_pct[1]))
         self.pos_pct = position

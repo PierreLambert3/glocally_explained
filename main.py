@@ -7,7 +7,7 @@ from engine.gui.window import Window
 from engine.screen_managers.main_manager import Main_manager
 import pygame, threading
 import numpy as np
-
+from data_fetchers import get_satellite
 
 
 def make_main_screen(theme, config, uid_generator):
@@ -53,20 +53,19 @@ def run_both(gui_args, worker_function, worker_args):
     gui.routine()
 
 def worker_function(dict):
-    X, Y = dict['X'], dict['Y']
-    N, M = X.shape
+    Xhd, Y, Xld = dict['Xhd'], dict['Y'], dict['Xld']
+    listener = dict['scatterplot redraw']
+    N, M = Xhd.shape
 
-    sample = X[:100]
-    center = selected_points[10]
-    Local_explanation(sample, center=None)
+    # Local_explanation(sample, center=None)
 
-1/ faire d'abord l'interface graphique (embedding a gauche et deux containers (un par axe) à droite)
-3/ dans le Scatterplot_explainable class il faut pouvoir ajouter/retirer des local explanations
-3/ chaque explanation: center + 2 axis (projetter sample sur les 2 PC du sample puis fitter un linreg HDsample->LDsample) + colorer selon le tout selon l'erreur du linreg
-4/ quand on clique gauche on selectione le closest explanation (upadate colours and variables à droite)
-5/ droit: on créé un new explanation
-5/ hover+d: find closest explanation et delete it
-2/ seulement afficher les 6 plus importants components dans chaque container
+# 1/ faire d'abord l'interface graphique (embedding a gauche et deux containers (un par axe) à droite)
+# 3/ dans le Scatterplot_explainable class il faut pouvoir ajouter/retirer des local explanations
+# 3/ chaque explanation: center + 2 axis (projetter sample sur les 2 PC du sample puis fitter un linreg HDsample->LDsample) + colorer selon le tout selon l'erreur du linreg
+# 4/ quand on clique gauche on selectione le closest explanation (upadate colours and variables à droite)
+# 5/ droit: on créé un new explanation
+# 5/ hover+d: find closest explanation et delete it
+# 2/ seulement afficher les 6 plus importants components dans chaque container
 
 
 def worker_function_test(dict):
@@ -86,6 +85,11 @@ def worker_function_test(dict):
 
 
 if __name__ == "__main__":
+    from sklearn.manifold import TSNE
+    Xhd, Y = get_satellite()
+    # Xld = TSNE(n_components=2, init='pca').fit_transform(Xhd)
+    # np.save("saved_Xld/satellite_LD.npy", Xld)
+    Xld = np.load("saved_Xld/satellite_LD.npy")
 
-    worker_args = [{'X':np.random.uniform(size=(1000, 2)), 'Y':np.zeros(1000, dtype=int)}]
+    worker_args = [{'Xhd':Xhd, 'Y':Y, 'Xld':Xld}]
     run_both(gui_args = "-w" if "-w" in sys.argv else "", worker_function=worker_function, worker_args=worker_args)
