@@ -55,7 +55,7 @@ def run_both(gui_args, worker_function, worker_args):
 
 def worker_function(dict):
     Xhd, Y, Xld = dict['Xhd'], dict['Y'], dict['Xld']
-    Y_colours = np.tile(np.array([80., 15., 240.]), Xld.shape[0]).reshape((Xld.shape[0], 3))
+    Y_colours = np.tile(np.array([253., 120., 0.]), Xld.shape[0]).reshape((Xld.shape[0], 3))
     event_manager = dict['manager']
     event_manager.receive_dataset(Xhd, Xld, Y, Y_colours)
 
