@@ -7,7 +7,7 @@ from engine.gui.window import Window
 from engine.screen_managers.main_manager import Main_manager
 import pygame, threading
 import numpy as np
-from data_fetchers import get_satellite
+from data_fetchers import *
 
 
 
@@ -55,24 +55,11 @@ def run_both(gui_args, worker_function, worker_args):
 
 def worker_function(dict):
     Xhd, Y, Xld = dict['Xhd'], dict['Y'], dict['Xld']
+    Xhd = Xhd[:, :7]
     Y_colours = np.tile(np.array([253., 120., 0.]), Xld.shape[0]).reshape((Xld.shape[0], 3))
     event_manager = dict['manager']
     event_manager.receive_dataset(Xhd, Xld, Y, Y_colours)
 
-
-    # listener = dict['scatterplot redraw']
-    # listener.notify((Xld, Y_colours))
-
-
-    # Local_explanation(sample, center=None)
-
-# 1/ faire d'abord l'interface graphique (embedding a gauche et deux containers (un par axe) à droite)
-# 3/ dans le Scatterplot_explainable class il faut pouvoir ajouter/retirer des local explanations
-# 3/ chaque explanation: center + 2 axis (projetter sample sur les 2 PC du sample puis fitter un linreg HDsample->LDsample) + colorer selon le tout selon l'erreur du linreg
-# 4/ quand on clique gauche on selectione le closest explanation (upadate colours and variables à droite)
-# 5/ droit: on créé un new explanation
-# 5/ hover+d: find closest explanation et delete it
-# 2/ seulement afficher les 6 plus importants components dans chaque container
 
 
 def worker_function_test(dict):
@@ -94,8 +81,12 @@ def worker_function_test(dict):
 if __name__ == "__main__":
     from sklearn.manifold import TSNE
     Xhd, Y = get_satellite()
+    # Xhd, Y = get_winequality()
+
     # Xld = TSNE(n_components=2, init='pca').fit_transform(Xhd)
     # np.save("saved_Xld/satellite_LD.npy", Xld)
+    # 1/0
+    # Xld = np.load("saved_Xld/satellite_LD.npy")
     Xld = np.load("saved_Xld/satellite_LD.npy")
 
     worker_args = [{'Xhd':Xhd, 'Y':Y, 'Xld':Xld}]

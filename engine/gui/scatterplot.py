@@ -13,8 +13,11 @@ class Feature_bar_thing(Element):
         super(Feature_bar_thing, self).__init__(pos_pct, dim_pct, name, parent, uid=uid, color=color)
         self.coeff = coeff
         self.maxabs = maxabs
+        self.add_text([(0.5,0.1), 2, (0.8,0.8), 18, self.name, self.color]) #  [pos_pct, anchor_id, max_dim, font_size, string, color]
+
 
     def draw(self, screen):
+
         pygame.draw.rect(screen, self.background_color, self.bounding_rect, 0)
         pos = np.array(self.abs_pos)
         dim = np.array(self.dim)
@@ -23,11 +26,11 @@ class Feature_bar_thing(Element):
         L = dim[0]/2
 
         # middle line
-        pygame.draw.line(screen, self.color*1.3, center-(0.18*a1*dim[1]), center+(0.15*a1*dim[1]), 1)
+        pygame.draw.line(screen, self.color, center-(0.18*a1*dim[1]), center+(0.15*a1*dim[1]), 1)
 
         p1 = center[0] + (self.coeff/self.maxabs)*(0.4*dim[0]), center[1]
         pygame.draw.line(screen, self.color*0.5, p1, center, 8)
-
+        super(Feature_bar_thing, self).draw(screen)
 
 
         # p1 = self.abs_pos[0], self.abs_pos[1]
@@ -52,9 +55,10 @@ class Axis_explained(Element):
         self.uid_generator = uid_generator
         self.manager = manager
 
-    def receive_features(self, features_list):
+    def receive_features(self, features_list, features_colours):
         self.M = len(features_list)
         self.features_labels = features_list.copy()
+        self.features_colours = features_colours
 
     def receive_explanation(self, explanation, axis_nb):
         self.draw_features = True
@@ -66,13 +70,10 @@ class Axis_explained(Element):
         maxabs = np.max(abs_comp)
         importance = np.argsort(abs_comp)
 
-        print()
-        print(component[importance])
-
         for i in range(min(self.Nshown, self.M)):
             coeff = component[importance[-(i+1)]]
             var_name = self.features_labels[importance[-(i+1)]]
-            self.subthings.append(Feature_bar_thing(coeff, maxabs, var_name, (0.02, 0.01+i*1./min(self.Nshown, self.M)), (0.96, 0.95*1/min(self.Nshown, self.M)), self, self.uid_generator.get(), self.color, self.manager))
+            self.subthings.append(Feature_bar_thing(coeff, maxabs, var_name, (0.02, 0.01+i*1./min(self.Nshown, self.M)), (0.96, 0.95*1/min(self.Nshown, self.M)), self, self.uid_generator.get(), self.features_colours[importance[-(i+1)]].astype(int), self.manager))
 
     def draw(self, screen):
         pygame.draw.rect(screen, self.background_color, self.bounding_rect, 0)

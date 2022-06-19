@@ -47,8 +47,9 @@ class Main_manager(Manager):
         self.KDtree_ld = KDTree(Xld, leaf_size=2)
         self.Y = Y
         self.has_dataset = True
-        self.ax1_explanation.receive_features(["variable "+str(i) for i in range(Xhd.shape[1])])
-        self.ax2_explanation.receive_features(["variable "+str(i) for i in range(Xhd.shape[1])])
+        feature_colours = np.tile(np.array((100., 50., 150.)), Xhd.shape[1]).reshape((-1, 3)) + np.random.uniform(size=(Xhd.shape[1],3))*100
+        self.ax1_explanation.receive_features(["variable "+str(i) for i in range(Xhd.shape[1])], feature_colours)
+        self.ax2_explanation.receive_features(["variable "+str(i) for i in range(Xhd.shape[1])], feature_colours)
 
     def select_explanation(self, explanation_idx):
         if explanation_idx == -1:
