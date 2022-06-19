@@ -14,7 +14,6 @@ def thoughtfull_name(Xld, colours, orig_colours, errors, err_min, span):
     for pt in range(Xld.shape[0]):
         colours[pt] = orig_colours[pt] * (errors[pt]-err_min)/span
 
-
 class Main_manager(Manager):
     def __init__(self, config, main_window, theme, uid_generator):
         super(Main_manager, self).__init__("main", initial_state=True)
