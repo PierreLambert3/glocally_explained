@@ -5,9 +5,11 @@ from scipy.linalg import norm
 import BIOT
 
 class Local_explanation_wrapper():
-    def __init__(self, sample_idx, Xld, Xhd, model=None):
-        # model = Dummy_model()
-        model = BIOT_model()
+    def __init__(self, sample_idx, Xld, Xhd, model='pca'):
+        if model == 'pca':
+            model = Dummy_model()
+        else:
+            model = BIOT_model()
 
         self.model = model
         self.sample_idx = sample_idx
@@ -29,7 +31,8 @@ class Local_explanation_wrapper():
         Xld_hat = self.model.transform(Xhd)
         Xld_hat += self.model.center
         errors = np.sqrt(np.sum((Xld_hat - Xld)**2, axis=1))
-        return -errors
+        # errors = np.sqrt(np.mean((Xld_hat - Xld)**2, axis=1))
+        return errors
 
 class Expl_model():
     def __init__(self):
@@ -67,16 +70,16 @@ class BIOT_model(Expl_model):
         N, M = Xhd.shape
         intercept = np.tile(self.w0, (N, 1))
 
-        print(self.center)
-        print(self.HDcenter)
-        print(self.axis2d)
-        print(self.features_coeffs_ax1)
-        print(self.features_coeffs_ax2)
-        print(self.center.shape)
-        print(self.HDcenter.shape)
-        print(self.axis2d.shape)
-        print(self.features_coeffs_ax1.shape)
-        print(self.features_coeffs_ax2.shape)
+        # print(self.center)
+        # print(self.HDcenter)
+        # print(self.axis2d)
+        # print(self.features_coeffs_ax1)
+        # print(self.features_coeffs_ax2)
+        # print(self.center.shape)
+        # print(self.HDcenter.shape)
+        # print(self.axis2d.shape)
+        # print(self.features_coeffs_ax1.shape)
+        # print(self.features_coeffs_ax2.shape)
 
         return ((intercept + (Xhd @ self.W)) @ self.R.T)
 
@@ -131,16 +134,16 @@ class Dummy_model(Expl_model):
         Xld1_hat = self.linreg1.predict(centered_HD)
         Xld2_hat = self.linreg2.predict(centered_HD)
 
-        print(self.center)
-        print(self.HDcenter)
-        print(self.axis2d)
-        print(self.features_coeffs_ax1)
-        print(self.features_coeffs_ax2)
-        print(self.center.shape)
-        print(self.HDcenter.shape)
-        print(self.axis2d.shape)
-        print(self.features_coeffs_ax1.shape)
-        print(self.features_coeffs_ax2.shape)
+        # print(self.center)
+        # print(self.HDcenter)
+        # print(self.axis2d)
+        # print(self.features_coeffs_ax1)
+        # print(self.features_coeffs_ax2)
+        # print(self.center.shape)
+        # print(self.HDcenter.shape)
+        # print(self.axis2d.shape)
+        # print(self.features_coeffs_ax1.shape)
+        # print(self.features_coeffs_ax2.shape)
 
         return np.hstack((Xld1_hat.reshape((-1,1)), Xld2_hat.reshape((-1,1))))
 

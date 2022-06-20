@@ -14,6 +14,46 @@ def thoughtfull_name(Xld, colours, orig_colours, errors, err_min, span):
     for pt in range(Xld.shape[0]):
         colours[pt] = orig_colours[pt] * (errors[pt]-err_min)/span
 
+class Node():
+    def __init__(self, idxs, is_leaf, split_axis, name):
+        self.idxs = idxs
+        self.is_leaf = is_leaf
+        self.split_axis = split_axis
+        self.name = name
+
+class Partition_Tree():
+    def __init__(self, Xhd, Xld, threshold, min_support, expl_method):
+        N, M = Xhd.shape
+        idxs = np.arange(N)
+        self.root = Node(idxs, is_leaf=False, split_axis=0, name=0)
+
+        nodes = [self.root]
+        kept_explanations = []
+        i = 0
+        while(nodes):
+            node = nodes.pop()
+            tmp_explanation = Local_explanation_wrapper(node.idxs, Xld, Xhd)
+            expl_err = np.mean(tmp_explanation.compute_errors(Xhd[node.idxs], Xld[node.idxs]))
+            if node.idxs.shape[0] <= min_support or expl_err < threshold:
+                node.is_leaf = True
+                kept_explanations.append(tmp_explanation)
+            else:
+                node.is_leaf = False
+                cut = np.median(Xld[node.idxs, node.split_axis], axis=0)
+
+                idx1 = node.idxs[np.where(Xld[node.idxs, node.split_axis] < cut)[0]]
+                idx2 = node.idxs[np.where(Xld[node.idxs, node.split_axis] >= cut)[0]]
+
+                n1 = Node(idx1, is_leaf=False, split_axis = 1 - node.split_axis, name=i)
+                n2 = Node(idx2, is_leaf=False, split_axis = 1 - node.split_axis, name=i)
+
+
+                nodes.append(n1)
+                nodes.append(n2)
+                i+=1
+        self.explanations = kept_explanations
+
+
 class Main_manager(Manager):
     def __init__(self, config, main_window, theme, uid_generator):
         super(Main_manager, self).__init__("main", initial_state=True)
@@ -50,18 +90,24 @@ class Main_manager(Manager):
         self.ax1_explanation.receive_features(["variable "+str(i) for i in range(Xhd.shape[1])], feature_colours)
         self.ax2_explanation.receive_features(["variable "+str(i) for i in range(Xhd.shape[1])], feature_colours)
 
+    def explain_full_dataset(self, algo='pca', threshold=10., min_support=10):
+        tree = Partition_Tree(self.Xhd, self.Xld, threshold, min_support, expl_method=algo)
+        for explanation in tree.explanations:
+            self.scatterplot.add_explanation(explanation)
+            
     def select_explanation(self, explanation_idx):
         if explanation_idx == -1:
             return
         self.scatterplot.selected_explanation = explanation_idx
         explanation = self.scatterplot.local_explanations[explanation_idx]
         errors = explanation.compute_errors(self.Xhd, self.Xld)
-        err_min, err_max = np.min(errors), np.max(errors)
-        span = err_max - err_min
+        goodness = -errors
+        score_min, score_max = np.min(goodness), np.max(goodness)
+        span = score_max - score_min
 
         colours      = self.scatterplot.Y_colours
         orig_colours = self.scatterplot.orig_Y_colours
-        thoughtfull_name(self.Xld, colours, orig_colours, errors, err_min, span)
+        thoughtfull_name(self.Xld, colours, orig_colours, goodness, score_min, span)
 
         self.ax1_explanation.receive_explanation(explanation, 0)
         self.ax2_explanation.receive_explanation(explanation, 1)

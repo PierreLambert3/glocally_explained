@@ -54,12 +54,14 @@ def run_both(gui_args, worker_function, worker_args):
     gui.routine()
 
 def worker_function(dict):
-    Xhd, Y, Xld = dict['Xhd'], dict['Y'], dict['Xld']
+    Xhd, Y, Xld, full_explain = dict['Xhd'], dict['Y'], dict['Xld'], dict['full_explain']
     Xhd = Xhd[:, :7]
     Y_colours = np.tile(np.array([253., 120., 0.]), Xld.shape[0]).reshape((Xld.shape[0], 3))
     event_manager = dict['manager']
     event_manager.receive_dataset(Xhd, Xld, Y, Y_colours)
 
+    if full_explain:
+        event_manager.explain_full_dataset(algo='pca', threshold=15., min_support=10)
 
 
 def worker_function_test(dict):
@@ -80,35 +82,22 @@ def worker_function_test(dict):
 
 if __name__ == "__main__":
     from sklearn.manifold import TSNE
-    Xhd, Y = get_satellite()
+    # Xhd, Y = get_satellite()
     # Xhd, Y = get_winequality()
+    Xhd, Y = get_airfoil()
 
     # Xld = TSNE(n_components=2, init='pca').fit_transform(Xhd)
     # np.save("saved_Xld/satellite_LD.npy", Xld)
+    # np.save("saved_Xld/winequality_LD.npy", Xld)
+    # np.save("saved_Xld/airfoil_LD.npy", Xld)
     # 1/0
     # Xld = np.load("saved_Xld/satellite_LD.npy")
-    Xld = np.load("saved_Xld/satellite_LD.npy")
+    # Xld = np.load("saved_Xld/winequality_LD.npy")
+    Xld = np.load("saved_Xld/airfoil_LD.npy")
 
-    worker_args = [{'Xhd':Xhd, 'Y':Y, 'Xld':Xld}]
+    full_explain = False
+    if len(sys.argv) > 1:
+        full_explain = True
+
+    worker_args = [{'Xhd':Xhd, 'Y':Y, 'Xld':Xld, 'full_explain':full_explain}]
     run_both(gui_args = "-w" if "-w" in sys.argv else "", worker_function=worker_function, worker_args=worker_args)
-
-# def worker_function(dict):
-#     X = dict['X']
-#     colours = (np.random.uniform(size=(X.shape[0], 3))*254.).astype(int)
-#     momentums = np.zeros_like(X)
-#     listener = dict['scatterplot redraw']
-#     import time
-#     for i in range(80):
-#         # update the point locations
-#         grads = np.random.normal(size=X.shape)
-#         momentums = 0.9*momentums - grads
-#         X += 0.05 * momentums
-#         # notify the screen for a redraw
-#         listener.notify((X, colours))
-#         time.sleep(0.05)
-#
-#
-# if __name__ == "__main__":
-#
-#     worker_args = [{'X':np.random.uniform(size=(1000, 2))}]
-#     run_both(gui_args = "-w" if "-w" in sys.argv else "", worker_function=worker_function, worker_args=worker_args)
