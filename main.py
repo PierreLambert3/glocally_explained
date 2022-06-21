@@ -54,14 +54,15 @@ def run_both(gui_args, worker_function, worker_args):
     gui.routine()
 
 def worker_function(dict):
-    Xhd, Y, Xld, full_explain = dict['Xhd'], dict['Y'], dict['Xld'], dict['full_explain']
+    Xhd, Y, Xld, full_explain, feature_names = dict['Xhd'], dict['Y'], dict['Xld'], dict['full_explain'], dict['feature_names']
     Xhd = Xhd[:, :7]
     Y_colours = np.tile(np.array([253., 120., 0.]), Xld.shape[0]).reshape((Xld.shape[0], 3))
     event_manager = dict['manager']
-    event_manager.receive_dataset(Xhd, Xld, Y, Y_colours)
+    event_manager.receive_dataset(Xhd, Xld, Y, Y_colours, feature_names=feature_names)
 
     if full_explain:
         event_manager.explain_full_dataset(algo='pca', threshold=15., min_support=10)
+        # event_manager.explain_full_dataset(algo='biot', threshold=6., min_support=8)
 
 
 def worker_function_test(dict):
@@ -82,9 +83,10 @@ def worker_function_test(dict):
 
 if __name__ == "__main__":
     from sklearn.manifold import TSNE
-    # Xhd, Y = get_satellite()
-    # Xhd, Y = get_winequality()
-    Xhd, Y = get_airfoil()
+
+    # Xhd, Y, feature_names = get_satellite()
+    # Xhd, Y, feature_names = get_winequality()
+    Xhd, Y, feature_names = get_airfoil()
 
     # Xld = TSNE(n_components=2, init='pca').fit_transform(Xhd)
     # np.save("saved_Xld/satellite_LD.npy", Xld)
@@ -99,5 +101,5 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         full_explain = True
 
-    worker_args = [{'Xhd':Xhd, 'Y':Y, 'Xld':Xld, 'full_explain':full_explain}]
+    worker_args = [{'Xhd':Xhd, 'Y':Y, 'Xld':Xld, 'full_explain':full_explain, 'feature_names': feature_names}]
     run_both(gui_args = "-w" if "-w" in sys.argv else "", worker_function=worker_function, worker_args=worker_args)

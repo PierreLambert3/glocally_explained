@@ -32,8 +32,9 @@ class Partition_Tree():
         i = 0
         while(nodes):
             node = nodes.pop()
-            tmp_explanation = Local_explanation_wrapper(node.idxs, Xld, Xhd)
+            tmp_explanation = Local_explanation_wrapper(node.idxs, Xld, Xhd, method = expl_method)
             expl_err = np.mean(tmp_explanation.compute_errors(Xhd[node.idxs], Xld[node.idxs]))
+            print(expl_err, '(thresh=',threshold,')')
             if node.idxs.shape[0] <= min_support or expl_err < threshold:
                 node.is_leaf = True
                 kept_explanations.append(tmp_explanation)
@@ -79,7 +80,7 @@ class Main_manager(Manager):
         self.has_dataset = False
         self.K_select = 150
 
-    def receive_dataset(self, Xhd, Xld, Y, Y_colours):
+    def receive_dataset(self, Xhd, Xld, Y, Y_colours, feature_names=None):
         self.scatterplot.set_points(Xld, Y_colours)
         self.Xhd = Xhd
         self.Xld = Xld
@@ -87,14 +88,20 @@ class Main_manager(Manager):
         self.Y = Y
         self.has_dataset = True
         feature_colours = np.tile(np.array((100., 50., 150.)), Xhd.shape[1]).reshape((-1, 3)) + np.random.uniform(size=(Xhd.shape[1],3))*100
-        self.ax1_explanation.receive_features(["variable "+str(i) for i in range(Xhd.shape[1])], feature_colours)
-        self.ax2_explanation.receive_features(["variable "+str(i) for i in range(Xhd.shape[1])], feature_colours)
+        if feature_names is None:
+            feature_names = ["variable "+str(i) for i in range(Xhd.shape[1])]
+        self.ax1_explanation.receive_features(feature_names, feature_colours)
+        self.ax2_explanation.receive_features(feature_names, feature_colours)
+
+    def new_explanation(self, neighbours_idx):
+        explanation = Local_explanation_wrapper(neighbours_idx, self.Xld, self.Xhd, method="biot")
+        self.scatterplot.add_explanation(explanation)
 
     def explain_full_dataset(self, algo='pca', threshold=10., min_support=10):
         tree = Partition_Tree(self.Xhd, self.Xld, threshold, min_support, expl_method=algo)
         for explanation in tree.explanations:
             self.scatterplot.add_explanation(explanation)
-            
+
     def select_explanation(self, explanation_idx):
         if explanation_idx == -1:
             return
@@ -127,10 +134,6 @@ class Main_manager(Manager):
                 self.new_explanation(neighbours)
             else:
                 self.scatterplot.delete_explanation(pos_in_LD)
-
-    def new_explanation(self, neighbours_idx):
-        explanation = Local_explanation_wrapper(neighbours_idx, self.Xld, self.Xhd)
-        self.scatterplot.add_explanation(explanation)
 
     def wake_up(self, prev_manager):
         super(Main_manager, self).wake_up(prev_manager)

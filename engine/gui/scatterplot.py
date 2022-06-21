@@ -132,8 +132,9 @@ class Explained_scatterplot(Element):
         N = self.X_LD_px.shape[0]
         coord = self.X_LD_px
         for i in range(N):
-            pygame.draw.line(screen, self.Y_colours[i], coord[i]-m1, coord[i]+m1, thickness)
-            pygame.draw.line(screen, self.Y_colours[i], coord[i]-m2, coord[i]+m2, thickness)
+            pygame.draw.circle(screen, self.Y_colours[i], coord[i], thickness)
+            # pygame.draw.line(screen, self.Y_colours[i], coord[i]-m1, coord[i]+m1, thickness)
+            # pygame.draw.line(screen, self.Y_colours[i], coord[i]-m2, coord[i]+m2, thickness)
 
         '''
         draw the explanations
@@ -143,7 +144,9 @@ class Explained_scatterplot(Element):
         center_colour2 = np.array([250, 180, 0])
         comp1_colour  = np.array([220, 120, 0])
         comp2_colour  = np.array([85, 20, 240])
+        lavender = np.array([80, 0, 140])
         a1 = np.array([1., -1.])
+        selected_idx = -1
         for i in range(Nexplanations):
             center = self.centers_in_px[i]
             comp1  = self.components1_in_px[i]
@@ -154,10 +157,17 @@ class Explained_scatterplot(Element):
                 pygame.draw.aaline(screen, comp1_colour, center, p1, 4)
                 pygame.draw.aaline(screen, comp2_colour, center, p2, 4)
                 pygame.draw.circle(screen, center_colour2, center, 6)
+                selected_idx = i
             else:
                 pygame.draw.aaline(screen, comp1_colour, center, p1, 2)
                 pygame.draw.aaline(screen, comp2_colour, center, p2, 2)
                 pygame.draw.circle(screen, center_colour, center, 4)
+
+        if selected_idx != -1:
+            sample_idxs = self.local_explanations[selected_idx].sample_idx
+            for idx in sample_idxs:
+                pygame.draw.circle(screen, lavender, coord[idx], thickness, 1)
+
 
 
     def delete(self):
