@@ -79,6 +79,10 @@ class Main_manager(Manager):
         self.Xhd, self.Xld, self.KDtree_ld, self.Y, self.Y_colours = None,None,None,None,None
         self.has_dataset = False
         self.K_select = 150
+        self.draw_grid = np.zeros((150, 150), dtype = int)
+
+        # self.drawing = False
+        # self.draw_list = []
 
     def receive_dataset(self, Xhd, Xld, Y, Y_colours, feature_names=None):
         self.scatterplot.set_points(Xld, Y_colours)
@@ -130,8 +134,11 @@ class Main_manager(Manager):
         else:
             pos_in_LD = self.scatterplot.px_pos_to_LD(pos)
             if not self.ctrl_pressed:
-                neighbours = self.KDtree_ld.query(pos_in_LD.reshape((1,2)), k=self.K_select, return_distance=False)[0]
-                self.new_explanation(neighbours)
+                pass
+                # self.drawing = True
+                # self.draw_list = [pos_in_LD]
+                # neighbours = self.KDtree_ld.query(pos_in_LD.reshape((1,2)), k=self.K_select, return_distance=False)[0]
+                # self.new_explanation(neighbours)
             else:
                 self.scatterplot.delete_explanation(pos_in_LD)
 
@@ -157,6 +164,11 @@ class Main_manager(Manager):
                 self.redraw_things()
             elif event_class == SCATTERPLOT_HOVER:
                 return
+            elif event_class == SCATTERPLOT_DRAWING_DONE:
+                print(value)
+                neighbours = value
+                print(neighbours, "\n\n\n")
+                self.new_explanation(neighbours)
             else:
                 print("unrecognised event received by main_manager: ", event_class, "  (see correspondance in event_ids.py)")
 
@@ -166,6 +178,11 @@ class Main_manager(Manager):
         if pressed_keys[0] == 'o':
             print("pressed o")
         return False
+
+    def on_awaited_mouse_release(self, to_redraw, release_pos, released_buttons, pressed_special_keys):
+        1/0
+        return True
+
 
     def redraw_things(self):
         self.ask_redraw(self.main_view)

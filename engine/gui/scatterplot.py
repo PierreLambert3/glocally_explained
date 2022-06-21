@@ -41,9 +41,6 @@ class Feature_bar_thing(Element):
         # pygame.draw.line(screen, self.color, p1, p2, 4)
 
 
-
-
-
 class Axis_explained(Element):
     def __init__(self, name, pos_pct, dim_pct, parent, uid_generator, color, manager):
         super(Axis_explained, self).__init__(pos_pct, dim_pct, name, parent, uid=uid_generator.get(), color=color)
@@ -93,6 +90,7 @@ class Explained_scatterplot(Element):
         self.add_listeners({"Lclick" : SCATTERPLOT_LEFT_CLICK,
                             "Rclick" : SCATTERPLOT_RIGHT_CLICK,
                             "hover"  : SCATTERPLOT_HOVER}, to_notify=manager)
+        self.draw_done_listener = Listener(SCATTERPLOT_DRAWING_DONE, [manager])
 
         '''
         ~~~~~~~~~~~~~~  scatterplot part  ~~~~~~~~~~~~~~
@@ -102,11 +100,16 @@ class Explained_scatterplot(Element):
         self.Y_colours = None
         self.orig_Y_colours = None
 
+
+        self.drawing = False
+        self.draw_list = []
+
         self.local_explanations = []   # contains Local_explanation_wrapper()
         self.centers_in_px      = []
         self.components1_in_px  = []
         self.components2_in_px  = []
         self.selected_explanation = -1
+
 
         '''
         ~~~~~~~~~~~~~~  pixel stuff  ~~~~~~~~~~~~~~
@@ -135,6 +138,9 @@ class Explained_scatterplot(Element):
             pygame.draw.circle(screen, self.Y_colours[i], coord[i], thickness)
             # pygame.draw.line(screen, self.Y_colours[i], coord[i]-m1, coord[i]+m1, thickness)
             # pygame.draw.line(screen, self.Y_colours[i], coord[i]-m2, coord[i]+m2, thickness)
+
+        for i in range(len(self.draw_list)):
+            pygame.draw.circle(screen, (np.array([100,200,100])), self.draw_list[i], thickness)
 
         '''
         draw the explanations
@@ -209,10 +215,14 @@ class Explained_scatterplot(Element):
             self.orig_Y_colours = Y_colours.copy()
         self.rebuild_points()
 
-    def px_pos_to_LD(self, mouse_pos):
+    def px_pos_to_LD(self, mouse_pos, no_reshape = False):
         if self.X_LD is None or self.px_to_LD_coefs is None:
             return
-        return np.array([mouse_pos[0]*self.px_to_LD_coefs[0] + self.px_to_LD_offsets[0], mouse_pos[1]*self.px_to_LD_coefs[1] + self.px_to_LD_offsets[1]]).reshape((1, 2))
+        out = np.array([mouse_pos[0]*self.px_to_LD_coefs[0] + self.px_to_LD_offsets[0], mouse_pos[1]*self.px_to_LD_coefs[1] + self.px_to_LD_offsets[1]])
+        if no_reshape:
+            return out
+        else:
+            return out.reshape((1, 2))
 
     def LD_pos_to_px(self, Xi):
         if self.X_LD is None or self.px_to_LD_coefs is None:
@@ -287,17 +297,35 @@ class Explained_scatterplot(Element):
     def propagate_Rmouse_down(self, to_redraw, windows, mouse_pos, mouse_button_status, pressed_special_keys, awaiting_mouse_move, awaiting_mouse_release):
         if self.point_is_within_plot(mouse_pos):
             self.on_Rclick_listener.notify((mouse_pos, windows), to_redraw)
+            self.drawing = True
+            self.draw_list = [mouse_pos]
+            self.schedule_awaiting(awaiting_mouse_move)
+            self.schedule_awaiting(awaiting_mouse_release)
             return True
         return False
 
 
     def propagate_hover(self, to_redraw, mouse_pos, pressed_special_keys, awaiting_mouse_move):
         if self.point_is_within_plot(mouse_pos):
-            self.on_hover_listener.notify((mouse_pos), to_redraw)
+            if self.drawing:
+                self.draw_list.append(mouse_pos)
+            # self.on_hover_listener.notify((mouse_pos), to_redraw)
+            self.schedule_draw(to_redraw)
             return True
         return True
 
+    def compute_which_points_are_inside(self, draw_trajectory):
+        idxs = np.where(Path(draw_trajectory).contains_points(self.X_LD_px))[0]
+        return np.array(idxs)
+
     def on_awaited_mouse_release(self, to_redraw, release_pos, released_buttons, pressed_special_keys):
+        self.drawing = False
+        if len(self.draw_list) > 3:
+            self.draw_list.append(self.draw_list[0])
+            inside = self.compute_which_points_are_inside(self.draw_list)
+            if inside.shape[0] < 3:
+                return True
+            self.draw_done_listener.notify((inside), to_redraw)
         return True
 
     def on_awaited_mouse_move(self, to_redraw, mouse_positions, mouse_button_status, pressed_special_keys):
