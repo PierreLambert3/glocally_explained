@@ -91,13 +91,14 @@ class Explained_scatterplot(Element):
                             "Rclick" : SCATTERPLOT_RIGHT_CLICK,
                             "hover"  : SCATTERPLOT_HOVER}, to_notify=manager)
         self.draw_done_listener = Listener(SCATTERPLOT_DRAWING_DONE, [manager])
-
+        self.manager = manager
         '''
         ~~~~~~~~~~~~~~  scatterplot part  ~~~~~~~~~~~~~~
         '''
         self.X_LD      = None
         self.X_LD_px   = None
         self.Y_colours = None
+        self.Y_colours_expl = None
         self.orig_Y_colours = None
 
 
@@ -126,7 +127,10 @@ class Explained_scatterplot(Element):
             return
         pygame.draw.rect(screen, self.background_color, self.bounding_rect, 0)
 
-        thickness = 2
+        # dot_colours = self.Y_colours_expl
+        dot_colours = self.Y_colours
+
+        thickness = 1
         m1 = np.array([0, 1])
         m2 = np.array([1, 0])
         '''
@@ -135,12 +139,11 @@ class Explained_scatterplot(Element):
         N = self.X_LD_px.shape[0]
         coord = self.X_LD_px
         for i in range(N):
-            pygame.draw.circle(screen, self.Y_colours[i], coord[i], thickness)
-            # pygame.draw.line(screen, self.Y_colours[i], coord[i]-m1, coord[i]+m1, thickness)
-            # pygame.draw.line(screen, self.Y_colours[i], coord[i]-m2, coord[i]+m2, thickness)
+            pygame.draw.circle(screen, dot_colours[i], coord[i], thickness)
 
-        for i in range(len(self.draw_list)):
-            pygame.draw.circle(screen, (np.array([100,200,100])), self.draw_list[i], thickness)
+        if self.drawing:
+            for i in range(len(self.draw_list)):
+                pygame.draw.circle(screen, (np.array([100,200,100])), self.draw_list[i], thickness)
 
         '''
         draw the explanations
@@ -151,6 +154,7 @@ class Explained_scatterplot(Element):
         comp1_colour  = np.array([220, 120, 0])
         comp2_colour  = np.array([85, 20, 240])
         lavender = np.array([80, 0, 140])
+        # lavender = np.array([35, 240, 50])
         a1 = np.array([1., -1.])
         selected_idx = -1
         for i in range(Nexplanations):
@@ -172,7 +176,7 @@ class Explained_scatterplot(Element):
         if selected_idx != -1:
             sample_idxs = self.local_explanations[selected_idx].sample_idx
             for idx in sample_idxs:
-                pygame.draw.circle(screen, lavender, coord[idx], thickness, 1)
+                pygame.draw.circle(screen, lavender, coord[idx], 3, 1)
 
 
 
@@ -204,7 +208,7 @@ class Explained_scatterplot(Element):
         del self.components1_in_px[iwinner]
         del self.components2_in_px[iwinner]
 
-    def set_points(self, X_LD, Y_colours):
+    def set_points(self, X_LD, Y_colours, Y_colours_expl):
         self.px_to_LD_coefs   = None
         self.px_to_LD_offsets = None
         if X_LD is not None:
@@ -212,6 +216,7 @@ class Explained_scatterplot(Element):
             self.X_LD_px    = np.zeros_like(self.X_LD)
         if Y_colours is not None:
             self.Y_colours  = Y_colours
+            self.Y_colours_expl = Y_colours_expl
             self.orig_Y_colours = Y_colours.copy()
         self.rebuild_points()
 
@@ -323,7 +328,7 @@ class Explained_scatterplot(Element):
         if len(self.draw_list) > 3:
             self.draw_list.append(self.draw_list[0])
             inside = self.compute_which_points_are_inside(self.draw_list)
-            if inside.shape[0] < 3:
+            if inside.shape[0] < 10:
                 return True
             self.draw_done_listener.notify((inside), to_redraw)
         return True

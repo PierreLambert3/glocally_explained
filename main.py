@@ -53,32 +53,45 @@ def run_both(gui_args, worker_function, worker_args):
     worker_thread.start()
     gui.routine()
 
-def worker_function(dict):
-    Xhd, Y, Xld, full_explain, feature_names = dict['Xhd'], dict['Y'], dict['Xld'], dict['full_explain'], dict['feature_names']
-    Xhd = Xhd[:, :7]
-    Y_colours = np.tile(np.array([253., 120., 0.]), Xld.shape[0]).reshape((Xld.shape[0], 3))
+def Kmeans_colours(Y):
+    from sklearn.cluster import KMeans
+    K = np.unique(Y).shape[0]
+    sample = np.random.uniform(size = 4000)*0.9 + 0.1
+    return KMeans(n_clusters=K).fit(sample).cluster_centers_
+
+def label_colours(Y):
+    unq_Y = np.unique(Y)
+    is_classification = True
+    if type(Y[0].item()) == float:
+        is_classification = False
+    if is_classification:
+        return Kmeans_colours(Y)
+    else:
+        ymin, ymax = np.min(Y), np.max(Y)
+        Y -= ymin
+        if ymax - ymin > 1e-9:
+            Y /= (ymax - ymin)
+        c2 = np.array([190, 150, 0])
+        c1 = np.array([0, 40, 250])
+        return (Y*c1[:,None] + (1-Y)*c2[:,None]).T
+
+
+def explain_things(dict):
+    Xhd, Y, Xld, feature_names = dict['Xhd'], dict['Y'], dict['Xld'], dict['feature_names']
+    Y_colours = label_colours(Y)
+    Y_colours_expl = np.tile(np.array([253., 120., 0.]), Xld.shape[0]).reshape((Xld.shape[0], 3))
+
+
+    methods = ['pca', 'biot']
+    expl_method = methods[0]
+    threshold = 120. # try using method = pca for a quick estimation of the threshold then set method = 'biot'
+    min_support = 10 # when partitining the LD space, if |local_sample| < min_support the stop recursive split, even if error(Xld_hat) is under the threshold
+
     event_manager = dict['manager']
-    event_manager.receive_dataset(Xhd, Xld, Y, Y_colours, feature_names=feature_names)
+    event_manager.receive_dataset(Xhd, Xld, Y, Y_colours, Y_colours_expl, feature_names=feature_names)
+    event_manager.method = expl_method
+    event_manager.explain_full_dataset(algo=event_manager.method, threshold=threshold, min_support=min_support)
 
-    if full_explain:
-        event_manager.explain_full_dataset(algo='pca', threshold=15., min_support=10)
-        # event_manager.explain_full_dataset(algo='biot', threshold=6., min_support=8)
-
-
-def worker_function_test(dict):
-    X = dict['X']
-    colours = (np.random.uniform(size=(X.shape[0], 3))*254.).astype(int)
-    momentums = np.zeros_like(X)
-    listener = dict['scatterplot redraw']
-    import time
-    for i in range(80):
-        # update the point locations
-        grads = np.random.normal(size=X.shape)
-        momentums = 0.9*momentums - grads
-        X += 0.05 * momentums
-        # notify the screen for a redraw
-        listener.notify((X, colours))
-        time.sleep(0.05)
 
 
 if __name__ == "__main__":
@@ -97,9 +110,5 @@ if __name__ == "__main__":
     # Xld = np.load("saved_Xld/winequality_LD.npy")
     Xld = np.load("saved_Xld/airfoil_LD.npy")
 
-    full_explain = False
-    if len(sys.argv) > 1:
-        full_explain = True
-
-    worker_args = [{'Xhd':Xhd, 'Y':Y, 'Xld':Xld, 'full_explain':full_explain, 'feature_names': feature_names}]
-    run_both(gui_args = "-w" if "-w" in sys.argv else "", worker_function=worker_function, worker_args=worker_args)
+    worker_args = [{'Xhd':Xhd, 'Y':Y, 'Xld':Xld, 'feature_names': feature_names}]
+    run_both(gui_args = "-w" if "-w" in sys.argv else "", worker_function=explain_things, worker_args=worker_args)

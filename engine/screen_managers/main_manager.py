@@ -62,6 +62,7 @@ class Main_manager(Manager):
         self.active  = True
         self.deleted = False
         self.theme = theme
+        self.method = 'biot'
 
         self.main_window   = main_window
         self.main_window.awaiting_key_press.append(self)
@@ -70,6 +71,7 @@ class Main_manager(Manager):
         self.lock = threading.Lock()
         self.main_view = self.main_window.containers[0]
 
+        self.an_explanation_is_selected = False
 
         self.scatterplot_redraw_listener = Listener(REDRAW_THINGS, [self])
         self.scatterplot = self.main_view.leaves[0]
@@ -81,11 +83,9 @@ class Main_manager(Manager):
         self.K_select = 150
         self.draw_grid = np.zeros((150, 150), dtype = int)
 
-        # self.drawing = False
-        # self.draw_list = []
 
-    def receive_dataset(self, Xhd, Xld, Y, Y_colours, feature_names=None):
-        self.scatterplot.set_points(Xld, Y_colours)
+    def receive_dataset(self, Xhd, Xld, Y, Y_colours, Y_colours_expl, feature_names=None):
+        self.scatterplot.set_points(Xld, Y_colours, Y_colours_expl)
         self.Xhd = Xhd
         self.Xld = Xld
         self.KDtree_ld = KDTree(Xld, leaf_size=2)
@@ -98,7 +98,7 @@ class Main_manager(Manager):
         self.ax2_explanation.receive_features(feature_names, feature_colours)
 
     def new_explanation(self, neighbours_idx):
-        explanation = Local_explanation_wrapper(neighbours_idx, self.Xld, self.Xhd, method="biot")
+        explanation = Local_explanation_wrapper(neighbours_idx, self.Xld, self.Xhd, method=self.method)
         self.scatterplot.add_explanation(explanation)
 
     def explain_full_dataset(self, algo='pca', threshold=10., min_support=10):
@@ -109,6 +109,7 @@ class Main_manager(Manager):
     def select_explanation(self, explanation_idx):
         if explanation_idx == -1:
             return
+        self.an_explanation_is_selected = True
         self.scatterplot.selected_explanation = explanation_idx
         explanation = self.scatterplot.local_explanations[explanation_idx]
         errors = explanation.compute_errors(self.Xhd, self.Xld)
@@ -135,10 +136,6 @@ class Main_manager(Manager):
             pos_in_LD = self.scatterplot.px_pos_to_LD(pos)
             if not self.ctrl_pressed:
                 pass
-                # self.drawing = True
-                # self.draw_list = [pos_in_LD]
-                # neighbours = self.KDtree_ld.query(pos_in_LD.reshape((1,2)), k=self.K_select, return_distance=False)[0]
-                # self.new_explanation(neighbours)
             else:
                 self.scatterplot.delete_explanation(pos_in_LD)
 
@@ -152,6 +149,7 @@ class Main_manager(Manager):
             elif event_class == CTRL_KEY_CHANGE:
                 is_pressed, pos = value
                 self.ctrl_pressed = is_pressed
+                self.an_explanation_is_selected = False
                 self.scatterplot.selected_explanation = -1
                 self.scatterplot.Y_colours = self.scatterplot.orig_Y_colours.copy()
                 self.redraw_things()
@@ -165,9 +163,7 @@ class Main_manager(Manager):
             elif event_class == SCATTERPLOT_HOVER:
                 return
             elif event_class == SCATTERPLOT_DRAWING_DONE:
-                print(value)
                 neighbours = value
-                print(neighbours, "\n\n\n")
                 self.new_explanation(neighbours)
             else:
                 print("unrecognised event received by main_manager: ", event_class, "  (see correspondance in event_ids.py)")
