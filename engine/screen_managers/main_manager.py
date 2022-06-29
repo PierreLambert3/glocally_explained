@@ -83,9 +83,10 @@ class Main_manager(Manager):
         self.K_select = 150
         self.draw_grid = np.zeros((150, 150), dtype = int)
 
+        self.selected_feature = None
+
 
     def receive_dataset(self, Xhd, Xld, Y, Y_colours, Y_colours_expl, feature_names=None):
-        self.scatterplot.set_points(Xld, Y_colours, Y_colours_expl)
         self.Xhd = Xhd
         self.Xld = Xld
         self.KDtree_ld = KDTree(Xld, leaf_size=2)
@@ -94,8 +95,10 @@ class Main_manager(Manager):
         feature_colours = np.tile(np.array((100., 50., 150.)), Xhd.shape[1]).reshape((-1, 3)) + np.random.uniform(size=(Xhd.shape[1],3))*100
         if feature_names is None:
             feature_names = ["variable "+str(i) for i in range(Xhd.shape[1])]
+        self.scatterplot.set_points(Xld, Y_colours, Y_colours_expl, feature_names)
         self.ax1_explanation.receive_features(feature_names, feature_colours)
         self.ax2_explanation.receive_features(feature_names, feature_colours)
+        self.feature_names = feature_names
 
     def new_explanation(self, neighbours_idx):
         explanation = Local_explanation_wrapper(neighbours_idx, self.Xld, self.Xhd, method=self.method)
@@ -142,6 +145,16 @@ class Main_manager(Manager):
     def wake_up(self, prev_manager):
         super(Main_manager, self).wake_up(prev_manager)
 
+    def select_feature(self, feature_name, left=True):
+        self.ax1_explanation.select_feature(feature_name, left_click=True)
+        self.ax2_explanation.select_feature(feature_name, left_click=True)
+        self.scatterplot.selected_feature = feature_name
+
+    def unselect_feature(self, left=True):
+        self.ax1_explanation.unselect_features(left_click=True)
+        self.ax2_explanation.unselect_features(left_click=True)
+        self.scatterplot.selected_feature = None
+
     def get_notified(self, event_class, id, value, to_redraw = []):
         with self.lock:
             if event_class == REDRAW_THINGS:
@@ -155,9 +168,11 @@ class Main_manager(Manager):
                 self.redraw_things()
 
             elif event_class == SCATTERPLOT_LEFT_CLICK:
+                self.unselect_feature()
                 self.click(value[0], left_click=True)
                 self.redraw_things()
             elif event_class == SCATTERPLOT_RIGHT_CLICK:
+                self.unselect_feature()
                 self.click(value[0], left_click=False)
                 self.redraw_things()
             elif event_class == SCATTERPLOT_HOVER:
@@ -165,6 +180,22 @@ class Main_manager(Manager):
             elif event_class == SCATTERPLOT_DRAWING_DONE:
                 neighbours = value
                 self.new_explanation(neighbours)
+            elif event_class == AXIS_LEFT_CLICK:
+                var_name = value[0]
+                if var_name is None:
+                    self.unselect_feature()
+                    return
+                print(var_name)
+                self.select_feature(var_name, left = True)
+                self.redraw_things()
+            elif event_class == AXIS_RIGHT_CLICK:
+                var_name = value[0]
+                if var_name is None:
+                    self.unselect_feature()
+                    return
+                print(var_name)
+                self.select_feature(var_name, left = False)
+                self.redraw_things()
             else:
                 print("unrecognised event received by main_manager: ", event_class, "  (see correspondance in event_ids.py)")
 

@@ -16,8 +16,11 @@ class Local_explanation_wrapper():
         self.model.fit(Xld[sample_idx], Xhd[sample_idx])
         self.axis2d = model.axis2d
         self.center = model.center
-        self.features_coeffs_ax1 = model.features_coeffs_ax1
-        self.features_coeffs_ax2 = model.features_coeffs_ax2
+        # self.features_coeffs_ax1 = model.features_coeffs_ax1
+        # self.features_coeffs_ax2 = model.features_coeffs_ax2
+
+    def get_features_coeff(self):
+        return self.model.features_coeffs_ax1, self.model.features_coeffs_ax2
 
         # target_direction = np.array([np.sqrt(2), np.sqrt(2)])
         # simi1 = np.dot(target_direction, self.axis2d[0])
@@ -91,7 +94,7 @@ class BIOT_model(Expl_model):
 
 
         Yhat, W, w0, R = BIOT.CV_BIOT(X_train = Xhd, X_test = Xhd, Y_train = Xld_centered, lam_list = lam_list, rotation = True, fit_intercept = False, num_folds=10, random_state = 1, scoring = 'neg_mean_squared_error')
-        W = W.to_numpy() # ugh
+        W = W.to_numpy()
 
         self.W = W
         self.w0 = w0

@@ -92,15 +92,15 @@ def explain_things(dict):
     event_manager.method = expl_method
     event_manager.explain_full_dataset(algo=event_manager.method, threshold=threshold, min_support=min_support)
 
-faire un merge des cells pour voir si le thresh est OK
-==> thresh plus bas puis remonter un peu pendant le merge (merg: re-entraine un modele sur les deux)
-
-réajuster avec Kmeans pour avoir des cells qui sont plus smooth ==> DEMANDER à berecca pour son implem
-
-ajouter importance des features sur les axes (click sur la feature et on le voit sur l'axe)
-colorbrew pour les axes (les axes sont blues et les features aussi dans)
-
-ordre de grandeur du threshold=> faire une linreg sur tout
+# faire un merge des cells pour voir si le thresh est OK
+# ==> thresh plus bas puis remonter un peu pendant le merge (merg: re-entraine un modele sur les deux)
+#
+# réajuster avec Kmeans pour avoir des cells qui sont plus smooth ==> DEMANDER à berecca pour son implem
+#
+# ajouter importance des features sur les axes (click sur la feature et on le voit sur l'axe)
+# colorbrew pour les axes (les axes sont blues et les features aussi dans)
+#
+# ordre de grandeur du threshold=> faire une linreg sur tout
 
 if __name__ == "__main__":
     from sklearn.manifold import TSNE

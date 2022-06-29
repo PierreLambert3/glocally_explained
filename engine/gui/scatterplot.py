@@ -14,11 +14,15 @@ class Feature_bar_thing(Element):
         self.coeff = coeff
         self.maxabs = maxabs
         self.add_text([(0.5,0.1), 2, (0.8,0.8), 18, self.name, self.color]) #  [pos_pct, anchor_id, max_dim, font_size, string, color]
-
+        self.selected = False
 
     def draw(self, screen):
+        if self.selected:
+            pygame.draw.rect(screen, self.background_color*2, self.bounding_rect, 0)
+            pygame.draw.rect(screen, self.background_color, self.bounding_rect, 2)
+        else:
+            pygame.draw.rect(screen, self.background_color, self.bounding_rect, 0)
 
-        pygame.draw.rect(screen, self.background_color, self.bounding_rect, 0)
         pos = np.array(self.abs_pos)
         dim = np.array(self.dim)
         a1 = np.array([0., 1.])
@@ -31,6 +35,8 @@ class Feature_bar_thing(Element):
         p1 = center[0] + (self.coeff/self.maxabs)*(0.4*dim[0]), center[1]
         pygame.draw.line(screen, self.color*0.5, p1, center, 8)
         super(Feature_bar_thing, self).draw(screen)
+
+
 
 
         # p1 = self.abs_pos[0], self.abs_pos[1]
@@ -52,6 +58,9 @@ class Axis_explained(Element):
         self.uid_generator = uid_generator
         self.manager = manager
 
+        self.add_listeners({"Lclick" : AXIS_LEFT_CLICK,
+                            "Rclick" : AXIS_RIGHT_CLICK}, to_notify=manager)
+
     def receive_features(self, features_list, features_colours):
         self.M = len(features_list)
         self.features_labels = features_list.copy()
@@ -60,9 +69,9 @@ class Axis_explained(Element):
     def receive_explanation(self, explanation, axis_nb):
         self.draw_features = True
         if axis_nb == 0:
-            component = explanation.features_coeffs_ax1
+            component = explanation.get_features_coeff()[0]
         else:
-            component = explanation.features_coeffs_ax2
+            component = explanation.get_features_coeff()[1]
         abs_comp = np.abs(component)
         maxabs = np.max(abs_comp)
         importance = np.argsort(abs_comp)
@@ -70,7 +79,9 @@ class Axis_explained(Element):
         for i in range(min(self.Nshown, self.M)):
             coeff = component[importance[-(i+1)]]
             var_name = self.features_labels[importance[-(i+1)]]
-            self.subthings.append(Feature_bar_thing(coeff, maxabs, var_name, (0.02, 0.01+i*1./min(self.Nshown, self.M)), (0.96, 0.95*1/min(self.Nshown, self.M)), self, self.uid_generator.get(), self.features_colours[importance[-(i+1)]].astype(int), self.manager))
+            pos = (0.02, i*1./min(self.Nshown, self.M))
+            dim = (0.98, 1/min(self.Nshown, self.M))
+            self.subthings.append(Feature_bar_thing(coeff, maxabs, var_name, pos, dim, self, self.uid_generator.get(), self.features_colours[importance[-(i+1)]].astype(int), self.manager))
 
     def draw(self, screen):
         pygame.draw.rect(screen, self.background_color, self.bounding_rect, 0)
@@ -79,6 +90,37 @@ class Axis_explained(Element):
             return
         for feat in self.subthings:
             feat.draw(screen)
+
+    def select_feature(self, feature_name, left_click=True):
+        self.unselect_features()
+        for feat in self.subthings:
+            if feat.name == feature_name:
+                feat.selected = True
+
+    def unselect_features(self, left_click=True):
+        for feat in self.subthings:
+            feat.selected = False
+
+    def whom_was_clicked(self, mouse_pos, windows, to_redraw):
+        var_name = None
+        for feat in self.subthings:
+            if feat.point_is_inside(mouse_pos):
+                var_name = feat.name
+        return var_name
+
+    def propagate_Lmouse_down(self, to_redraw, windows, mouse_pos, mouse_button_status, pressed_special_keys, awaiting_mouse_move, awaiting_mouse_release):
+        if self.point_is_inside(mouse_pos):
+            var_name = self.whom_was_clicked(mouse_pos, windows, to_redraw)
+            self.on_Lclick_listener.notify((var_name, windows), to_redraw)
+            return True
+        return False
+
+    def propagate_Rmouse_down(self, to_redraw, windows, mouse_pos, mouse_button_status, pressed_special_keys, awaiting_mouse_move, awaiting_mouse_release):
+        if self.point_is_inside(mouse_pos):
+            var_name = self.whom_was_clicked(mouse_pos, windows, to_redraw)
+            self.on_Rclick_listener.notify((var_name, windows), to_redraw)
+            return True
+        return False
 
 class Explained_scatterplot(Element):
     def __init__(self, name, pos_pct, dim_pct, parent, uid_generator, color, manager):
@@ -111,6 +153,7 @@ class Explained_scatterplot(Element):
         self.components2_in_px  = []
         self.selected_explanation = -1
 
+        self.selected_feature = None
 
         '''
         ~~~~~~~~~~~~~~  pixel stuff  ~~~~~~~~~~~~~~
@@ -149,6 +192,12 @@ class Explained_scatterplot(Element):
         draw the explanations
         '''
         Nexplanations = len(self.local_explanations)
+        sel_idx = -1
+        if self.selected_feature is not None and self.feature_names is not None:
+            for i in range(len(self.feature_names)):
+                if self.feature_names[i] == self.selected_feature:
+                    sel_idx = i
+
         center_colour = np.array([50, 220, 0])
         center_colour2 = np.array([250, 180, 0])
         comp1_colour  = np.array([220, 120, 0])
@@ -158,6 +207,17 @@ class Explained_scatterplot(Element):
         a1 = np.array([1., -1.])
         selected_idx = -1
         for i in range(Nexplanations):
+
+            expl = self.local_explanations[i]
+            expl_W1, expl_W2 = expl.get_features_coeff()
+            expl_W1 = np.abs(expl_W1) / np.sum(np.abs(expl_W1))
+            expl_W2 = np.abs(expl_W2) / np.sum(np.abs(expl_W2))
+
+
+
+            # print(np.round( , 2))
+            # print(np.round(np.abs(expl_W2) / np.sum(np.abs(expl_W2)) , 2))
+
             center = self.centers_in_px[i]
             comp1  = self.components1_in_px[i]
             comp2  = self.components2_in_px[i]
@@ -172,12 +232,16 @@ class Explained_scatterplot(Element):
                 pygame.draw.aaline(screen, comp1_colour, center, p1, 2)
                 pygame.draw.aaline(screen, comp2_colour, center, p2, 2)
                 pygame.draw.circle(screen, center_colour, center, 4)
+            # seleted feature importance
+            v1 = (p1 - center) * expl_W1[sel_idx]
+            v2 = (p2 - center) * expl_W2[sel_idx]
+            pygame.draw.line(screen, comp1_colour, center, center+v1, 6)
+            pygame.draw.line(screen, comp2_colour, center, center+v2, 6)
 
         if selected_idx != -1:
             sample_idxs = self.local_explanations[selected_idx].sample_idx
             for idx in sample_idxs:
                 pygame.draw.circle(screen, lavender, coord[idx], 3, 1)
-
 
 
     def delete(self):
@@ -208,9 +272,10 @@ class Explained_scatterplot(Element):
         del self.components1_in_px[iwinner]
         del self.components2_in_px[iwinner]
 
-    def set_points(self, X_LD, Y_colours, Y_colours_expl):
+    def set_points(self, X_LD, Y_colours, Y_colours_expl, feature_names):
         self.px_to_LD_coefs   = None
         self.px_to_LD_offsets = None
+        self.feature_names = feature_names
         if X_LD is not None:
             self.X_LD       = X_LD
             self.X_LD_px    = np.zeros_like(self.X_LD)
@@ -293,7 +358,6 @@ class Explained_scatterplot(Element):
 
 
     def propagate_Lmouse_down(self, to_redraw, windows, mouse_pos, mouse_button_status, pressed_special_keys, awaiting_mouse_move, awaiting_mouse_release):
-        print("clicked in the")
         if self.point_is_within_plot(mouse_pos):
             self.on_Lclick_listener.notify((mouse_pos, windows), to_redraw)
             return True
