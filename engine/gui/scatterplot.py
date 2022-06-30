@@ -20,6 +20,7 @@ class Feature_bar_thing(Element):
         if self.selected:
             pygame.draw.rect(screen, self.background_color*2, self.bounding_rect, 0)
             pygame.draw.rect(screen, self.background_color, self.bounding_rect, 2)
+            pygame.draw.rect(screen, self.color, self.bounding_rect, 1)
         else:
             pygame.draw.rect(screen, self.background_color, self.bounding_rect, 0)
 
@@ -79,8 +80,8 @@ class Axis_explained(Element):
         for i in range(min(self.Nshown, self.M)):
             coeff = component[importance[-(i+1)]]
             var_name = self.features_labels[importance[-(i+1)]]
-            pos = (0.02, i*1./min(self.Nshown, self.M))
-            dim = (0.98, 1/min(self.Nshown, self.M))
+            pos = (0.02, 0.025 + 0.985*i*1./min(self.Nshown, self.M))
+            dim = (0.98, 0.9*1/min(self.Nshown, self.M))
             self.subthings.append(Feature_bar_thing(coeff, maxabs, var_name, pos, dim, self, self.uid_generator.get(), self.features_colours[importance[-(i+1)]].astype(int), self.manager))
 
     def draw(self, screen):
@@ -198,10 +199,10 @@ class Explained_scatterplot(Element):
                 if self.feature_names[i] == self.selected_feature:
                     sel_idx = i
 
-        center_colour = np.array([50, 220, 0])
-        center_colour2 = np.array([250, 180, 0])
-        comp1_colour  = np.array([220, 120, 0])
-        comp2_colour  = np.array([85, 20, 240])
+        center_colour = np.array([161., 94., 249.])
+        center_colour2 = np.array([249., 151., 94.])
+        comp1_colour  = np.array([161., 94., 249.])
+        comp2_colour  = np.array([249., 151., 94.])
         lavender = np.array([80, 0, 140])
         # lavender = np.array([35, 240, 50])
         a1 = np.array([1., -1.])
@@ -232,11 +233,12 @@ class Explained_scatterplot(Element):
                 pygame.draw.aaline(screen, comp1_colour, center, p1, 2)
                 pygame.draw.aaline(screen, comp2_colour, center, p2, 2)
                 pygame.draw.circle(screen, center_colour, center, 4)
+
             # seleted feature importance
             v1 = (p1 - center) * expl_W1[sel_idx]
             v2 = (p2 - center) * expl_W2[sel_idx]
-            pygame.draw.line(screen, comp1_colour, center, center+v1, 6)
-            pygame.draw.line(screen, comp2_colour, center, center+v2, 6)
+            pygame.draw.line(screen, comp1_colour, center, center+v1, 5)
+            pygame.draw.line(screen, comp2_colour, center, center+v2, 5)
 
         if selected_idx != -1:
             sample_idxs = self.local_explanations[selected_idx].sample_idx

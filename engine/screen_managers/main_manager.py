@@ -92,12 +92,13 @@ class Main_manager(Manager):
         self.KDtree_ld = KDTree(Xld, leaf_size=2)
         self.Y = Y
         self.has_dataset = True
-        feature_colours = np.tile(np.array((100., 50., 150.)), Xhd.shape[1]).reshape((-1, 3)) + np.random.uniform(size=(Xhd.shape[1],3))*100
+        feature_colours1 = np.tile(np.array((161., 94., 249.)), Xhd.shape[1]).reshape((-1, 3))
+        feature_colours2 = np.tile(np.array((249., 151., 94.)), Xhd.shape[1]).reshape((-1, 3))
         if feature_names is None:
             feature_names = ["variable "+str(i) for i in range(Xhd.shape[1])]
         self.scatterplot.set_points(Xld, Y_colours, Y_colours_expl, feature_names)
-        self.ax1_explanation.receive_features(feature_names, feature_colours)
-        self.ax2_explanation.receive_features(feature_names, feature_colours)
+        self.ax1_explanation.receive_features(feature_names, feature_colours1)
+        self.ax2_explanation.receive_features(feature_names, feature_colours2)
         self.feature_names = feature_names
 
     def new_explanation(self, neighbours_idx):
@@ -108,6 +109,21 @@ class Main_manager(Manager):
         tree = Partition_Tree(self.Xhd, self.Xld, threshold, min_support, expl_method=algo)
         for explanation in tree.explanations:
             self.scatterplot.add_explanation(explanation)
+
+    def explain_full_dataset(self, algo='pca', threshold=10., min_support=10):
+        from sklearn.cluster import KMeans
+        model = KMeans(n_clusters=15, random_state=0).fit(self.Xld)
+        centers = model.cluster_centers_
+        labels = model.labels_
+        for i in range(centers.shape[0]):
+            idxs = np.where(labels == i)[0]
+            Nidx = idxs.shape[0]
+            if Nidx > min_support:
+                explanation = Local_explanation_wrapper(idxs, self.Xld, self.Xhd, method = 'biot')
+                self.scatterplot.add_explanation(explanation)
+
+
+
 
     def select_explanation(self, explanation_idx):
         if explanation_idx == -1:

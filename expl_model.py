@@ -22,6 +22,18 @@ class Local_explanation_wrapper():
     def get_features_coeff(self):
         return self.model.features_coeffs_ax1, self.model.features_coeffs_ax2
 
+
+merger sans re-train BIOT (regarder ensemble methods, ==> selon rotation/ W) (pdt le merging)
+
+tester truc tout simple: rot moyenne et W moyen entre les deux à merger!!!!
+
+"neural gas" avec plusieurs axes + lasso et on split ou merge
+
+CODE DE REBECCA POUR A LA TOUTE FIN ==> ON RECHECKE POUR VOIR SI ON DOIT PAS RE-ASSIGNER LES POINTS ENTRE LES MODELES
+(qqes points passent d'un node à l'autre selon explication)
+
+REUNION LE 8
+
         # target_direction = np.array([np.sqrt(2), np.sqrt(2)])
         # simi1 = np.dot(target_direction, self.axis2d[0])
         # simi2 = np.dot(target_direction, self.axis2d[1])
