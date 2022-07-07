@@ -85,11 +85,11 @@ def BIOT (X, Y, lam, max_iter = 500, eps = 1e-6, rotation = False, R = None, fit
             # UPDATE R
             u, s, v = np.linalg.svd((1/(2*n)) * Y.T @ (np.tile(w0, (n, 1)) + (X @ W)))
         
-            # rotation matrix desired (clockwise)
+            # rotation matrix desired (counterclockwise)
             if rotation:
                 sv = np.ones(len(s))
                 which_smallest_s = np.argmin(s)
-                sv[which_smallest_s] = np.sign(np.linalg.det(v.T @ u))
+                sv[which_smallest_s] = np.sign(np.linalg.det(u @ v))
                 R = u @ np.diag(sv) @ v
             # orthogonal transformation matrix desired
             else:
