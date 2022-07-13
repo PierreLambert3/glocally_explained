@@ -22,7 +22,7 @@ def get_all_data(dataset_name):
     # write get_myDataset() in data_fetchers.py for some examples
     else:
         print('wrong dataset name: '+str(dataset_name)+ ' \n\n\n\n\n\n'); 1/0
-    return Xhd, get_Xld(dataset_name, Xhd), Y, feature_names
+    return Xhd, get_Xld(dataset_name, Xhd), Y.astype(np.float), feature_names
 
 def main():
     dataset_names = ['airfoil', 'satellite', 'winequality']

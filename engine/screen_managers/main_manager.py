@@ -222,8 +222,8 @@ class Main_manager(Manager):
 
 
     def explain_full_dataset(self, threshold=10., min_support=10):
-        self.explain_full_dataset_splitting(threshold=threshold, min_support=min_support)
-        # self.explain_full_dataset_Kmeans(threshold=threshold, min_support=min_support, K=10)
+        # self.explain_full_dataset_splitting(threshold=threshold, min_support=min_support)
+        self.explain_full_dataset_Kmeans(threshold=threshold, min_support=min_support, K=10)
 
         print('todo: réparer merge_explanations(): le "mean model" marche bien, mais il y a un bug à trouver.')
         # self.merge_explanations(threshold=threshold)
