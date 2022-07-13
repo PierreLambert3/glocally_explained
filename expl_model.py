@@ -5,10 +5,6 @@ from scipy.linalg import norm
 import BIOT
 
 
-# tester truc avec rot moyenne et W moyen entre les deux à merger!!!! (rotation de l un dans angle/2 et l autre dans -angle/2)
-#
-# multi-biot
-
 
 class Local_explanation_wrapper():
     def __init__(self, sample_idx, Xld, Xhd, method='pca', fit=True):

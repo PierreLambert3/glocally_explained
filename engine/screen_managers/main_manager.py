@@ -242,7 +242,6 @@ class Main_manager(Manager):
         # Yhat, W_list, w0_list, R_list, clusters = Multi_BIOT.CV_Multi_BIOT(
         #     X_train = pd.DataFrame(self.Xhd), X_test = pd.DataFrame(self.Xhd), Y_train = pd.DataFrame(self.Xld), lam_list = lam_list,
         #     K_list = None, clusters = initial_clusters, rotation = True)
-        #
         # print(Yhat)
         # print(W_list[0].shape)
         # print(w0_list)
