@@ -8,6 +8,8 @@ from engine.screens.main_screen import Main_screen
 from expl_model import Local_explanation_wrapper
 from sklearn.neighbors import KDTree
 from numba import njit
+import Multi_BIOT
+import BIOT
 
 @njit
 def thoughtfull_name(Xld, colours, orig_colours, errors, err_min, span):
@@ -21,38 +23,39 @@ class Node():
         self.split_axis = split_axis
         self.name = name
 
-class Partition_Tree():
-    def __init__(self, Xhd, Xld, threshold, min_support, expl_method):
-        N, M = Xhd.shape
-        idxs = np.arange(N)
-        self.root = Node(idxs, is_leaf=False, split_axis=0, name=0)
 
-        nodes = [self.root]
-        kept_explanations = []
-        i = 0
-        while(nodes):
-            node = nodes.pop()
-            tmp_explanation = Local_explanation_wrapper(node.idxs, Xld, Xhd, method = expl_method)
-            expl_err = np.mean(tmp_explanation.compute_errors(Xhd[node.idxs], Xld[node.idxs]))
-            print(expl_err, '(thresh=',threshold,')')
-            if node.idxs.shape[0] <= min_support or expl_err < threshold:
-                node.is_leaf = True
-                kept_explanations.append(tmp_explanation)
-            else:
-                node.is_leaf = False
-                cut = np.median(Xld[node.idxs, node.split_axis], axis=0)
+def split_embedding(Xhd, Xld, threshold, min_support, expl_method):
+    N, M = Xhd.shape
+    idxs = np.arange(N)
+    root = Node(idxs, is_leaf=False, split_axis=0, name=0)
 
-                idx1 = node.idxs[np.where(Xld[node.idxs, node.split_axis] < cut)[0]]
-                idx2 = node.idxs[np.where(Xld[node.idxs, node.split_axis] >= cut)[0]]
+    nodes = [root]
+    kept_explanations = []
+    i = 0
+    while(nodes):
+        node = nodes.pop()
+        tmp_explanation = Local_explanation_wrapper(node.idxs, Xld, Xhd, method = expl_method)
+        expl_err = np.mean(tmp_explanation.compute_errors(Xhd[node.idxs], Xld[node.idxs]))
+        print(expl_err, '(thresh=',threshold,')')
+        if node.idxs.shape[0] <= min_support or expl_err < threshold:
+            node.is_leaf = True
+            yield tmp_explanation
+            # kept_explanations.append(tmp_explanation)
+        else:
+            node.is_leaf = False
+            cut = np.median(Xld[node.idxs, node.split_axis], axis=0)
 
-                n1 = Node(idx1, is_leaf=False, split_axis = 1 - node.split_axis, name=i)
-                n2 = Node(idx2, is_leaf=False, split_axis = 1 - node.split_axis, name=i)
+            idx1 = node.idxs[np.where(Xld[node.idxs, node.split_axis] < cut)[0]]
+            idx2 = node.idxs[np.where(Xld[node.idxs, node.split_axis] >= cut)[0]]
+
+            n1 = Node(idx1, is_leaf=False, split_axis = 1 - node.split_axis, name=i)
+            n2 = Node(idx2, is_leaf=False, split_axis = 1 - node.split_axis, name=i)
 
 
-                nodes.append(n1)
-                nodes.append(n2)
-                i+=1
-        self.explanations = kept_explanations
+            nodes.append(n1)
+            nodes.append(n2)
+            i+=1
+    # return kept_explanations
 
 
 class Main_manager(Manager):
@@ -105,12 +108,15 @@ class Main_manager(Manager):
         explanation = Local_explanation_wrapper(neighbours_idx, self.Xld, self.Xhd, method=self.method)
         self.scatterplot.add_explanation(explanation)
 
-    def explain_full_dataset(self, algo='pca', threshold=10., min_support=10):
-        tree = Partition_Tree(self.Xhd, self.Xld, threshold, min_support, expl_method=algo)
-        for explanation in tree.explanations:
-            self.scatterplot.add_explanation(explanation)
 
-    def explain_full_dataset(self, algo='pca', threshold=10., min_support=10):
+
+
+    def explain_full_dataset_splitting(self, algo, threshold, min_support):
+        for explanation in split_embedding(self.Xhd, self.Xld, threshold, min_support, algo):
+            self.scatterplot.add_explanation(explanation)
+            self.redraw_things()
+
+    def explain_full_dataset_Kmeans(self, algo, threshold, min_support):
         from sklearn.cluster import KMeans
         model = KMeans(n_clusters=15, random_state=0).fit(self.Xld)
         centers = model.cluster_centers_
@@ -122,7 +128,48 @@ class Main_manager(Manager):
                 explanation = Local_explanation_wrapper(idxs, self.Xld, self.Xhd, method = 'biot')
                 self.scatterplot.add_explanation(explanation)
 
+    def merge_explanations(self):
+        explanations = self.scatterplot.local_explanations
+        N_expla = len(explanations)
 
+        for pass_i in range(10):
+
+            for i, expl in enumerate(explanations):
+                pos = expl.center_LD
+                d = np.zeros(N_expla)
+                for u, expl2 in enumerate(explanations):
+                    d[u] = np.sum((expl2.center_LD - pos)**2)
+                neighbours = np.argsort(d)
+
+                for r, neigh in enumerate(neighbours):
+                    expl2 = explanations[neigh]
+
+
+                    ici faire la moyenne entre les deux angles et la moyenne entre les modeles puis checker l'erreur
+                    1/0
+
+    def explain_full_dataset(self, algo='pca', threshold=10., min_support=10):
+        self.explain_full_dataset_splitting(algo=algo, threshold=threshold, min_support=min_support)
+
+        self.merge_explanations() # attempt merge avec un mean angle
+
+        print("MULTI BIOT")
+        max_lam = BIOT.calc_max_lam(self.Xhd, self.Xld)
+        n_lam = 10
+        lam_values = max_lam*(10**np.linspace(-1, 0, num=n_lam, endpoint=True, retstep=False, dtype=None))
+        lam_list = lam_values.tolist()
+        initial_clusters = np.zeros(self.Xhd.shape[0], dtype=int)
+        for i, expl in enumerate(self.scatterplot.local_explanations):
+            initial_clusters[expl.sample_idx] = i
+        Yhat, W_list, w0_list, R_list, clusters = Multi_BIOT.CV_Multi_BIOT(
+            X_train = pd.DataFrame(self.Xhd), X_test = pd.DataFrame(self.Xhd), Y_train = pd.DataFrame(self.Xld), lam_list = lam_list,
+            K_list = None, clusters = initial_clusters, rotation = True)
+
+        print(Yhat)
+        print(W_list[0].shape)
+        print(w0_list)
+        print(R_list)
+        print(clusters)
 
 
     def select_explanation(self, explanation_idx):

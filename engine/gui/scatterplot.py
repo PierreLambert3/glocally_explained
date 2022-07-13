@@ -252,14 +252,14 @@ class Explained_scatterplot(Element):
 
     def add_explanation(self, explanation):
         self.local_explanations.append(explanation)
-        self.centers_in_px.append(self.LD_pos_to_px(explanation.center))
+        self.centers_in_px.append(self.LD_pos_to_px(explanation.center_LD))
         self.components1_in_px.append(explanation.axis2d[0])
         self.components2_in_px.append(explanation.axis2d[1])
 
     def closest_explanation(self, pos):
         dwinner, iwinner = 1e12, -1
         for i in range(len(self.local_explanations)):
-            expl_pos = self.local_explanations[i].center
+            expl_pos = self.local_explanations[i].center_LD
             d = np.sum((pos-expl_pos)**2)
             if d < dwinner:
                 dwinner = d
