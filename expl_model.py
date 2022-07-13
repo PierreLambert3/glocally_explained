@@ -29,8 +29,7 @@ class Local_explanation_wrapper():
 
     def compute_errors(self, Xhd, Xld):
         Xld_hat = self.model.transform(Xhd)
-        errors = np.sqrt(np.sum((Xld_hat - Xld)**2, axis=1))
-        # errors = np.sqrt(np.mean((Xld_hat - Xld)**2, axis=1))
+        errors = np.sqrt(np.mean((Xld_hat - Xld)**2, axis=1))
 
         print("\nmean error : ", np.mean(errors))
         try:
@@ -68,23 +67,27 @@ class BIOT_model(Expl_model):
         self.w0 = None
         self.R  = None
 
-    def transform(self, Xhd):
+    def transform(self, Xhd, HD_is_centered=False, uncenter=True):
         assert self.center_HD is not None and self.center_LD is not None
         N, M = Xhd.shape
         intercept = np.tile(self.w0, (N, 1))
-        Xhd = Xhd - self.center_HD
-        return ((intercept + (Xhd @ self.W)) @ self.R.T) + self.center_LD
+        if not HD_is_centered:
+            Xhd = Xhd - self.center_HD
+        if uncenter:
+            return ((intercept + (Xhd @ self.W)) @ self.R.T) + self.center_LD
+        else:
+            return ((intercept + (Xhd @ self.W)) @ self.R.T)
 
 
     def fit(self, Xld, Xhd, center_LD=None, center_HD=None):
         from sklearn.preprocessing import StandardScaler
         import pandas as pd
-        self.center_HD = center_HD
-        self.center_LD = center_LD
+        self.center_HD = np.mean(Xhd, axis=0)
+        self.center_LD = np.mean(Xld, axis=0)
         if center_LD is not None:
-            self.center_LD = np.mean(Xld, axis=0)
+            self.center_LD = center_LD
         if center_HD is not None:
-            self.center_HD = np.mean(Xhd, axis=0)
+            self.center_HD = center_HD
 
         Xhd_centered = Xhd - self.center_HD
         Xld_centered = Xld - self.center_LD
@@ -100,7 +103,7 @@ class BIOT_model(Expl_model):
         self.W = W
         self.w0 = w0
         self.R = R
-        self.axis2d = R
+        self.axis2d = self.R
         self.features_coeffs_ax1 = W[:,0]
         self.features_coeffs_ax2 = W[:,1]
 

@@ -42,13 +42,13 @@ def explain_things(dict):
 
     methods = ['pca', 'biot']
     expl_method = methods[1]
-    threshold = 10. # try using method = pca for a quick estimation of the threshold then set method = 'biot'
+    threshold = 6.5 # try using method = pca for a quick estimation of the threshold then set method = 'biot'
     min_support = 10 # when partitining the LD space, if |local_sample| < min_support the stop recursive split, even if error(Xld_hat) is under the threshold
 
     event_manager = dict['manager']
     event_manager.receive_dataset(Xhd, Xld, Y, Y_colours, Y_colours_expl, feature_names=feature_names)
     event_manager.method = expl_method
-    event_manager.explain_full_dataset(algo=event_manager.method, threshold=threshold, min_support=min_support)
+    event_manager.explain_full_dataset(threshold=threshold, min_support=min_support)
 
 
 def run_both(gui_args, worker_function, worker_args):

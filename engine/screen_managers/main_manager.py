@@ -10,6 +10,7 @@ from sklearn.neighbors import KDTree
 from numba import njit
 import Multi_BIOT
 import BIOT
+from scipy.linalg import norm
 
 @njit
 def thoughtfull_name(Xld, colours, orig_colours, errors, err_min, span):
@@ -24,7 +25,7 @@ class Node():
         self.name = name
 
 
-def split_embedding(Xhd, Xld, threshold, min_support, expl_method):
+def split_embedding(Xhd, Xld, threshold, min_support):
     N, M = Xhd.shape
     idxs = np.arange(N)
     root = Node(idxs, is_leaf=False, split_axis=0, name=0)
@@ -34,10 +35,10 @@ def split_embedding(Xhd, Xld, threshold, min_support, expl_method):
     i = 0
     while(nodes):
         node = nodes.pop()
-        tmp_explanation = Local_explanation_wrapper(node.idxs, Xld, Xhd, method = expl_method)
+        tmp_explanation = Local_explanation_wrapper(node.idxs, Xld, Xhd, method = 'biot')
         expl_err = np.mean(tmp_explanation.compute_errors(Xhd[node.idxs], Xld[node.idxs]))
         print(expl_err, '(thresh=',threshold,')')
-        if node.idxs.shape[0] <= min_support or expl_err < threshold:
+        if node.idxs.shape[0] <= min_support*2+1 or expl_err < threshold:
             node.is_leaf = True
             yield tmp_explanation
             # kept_explanations.append(tmp_explanation)
@@ -108,68 +109,145 @@ class Main_manager(Manager):
         explanation = Local_explanation_wrapper(neighbours_idx, self.Xld, self.Xhd, method=self.method)
         self.scatterplot.add_explanation(explanation)
 
-
-
-
-    def explain_full_dataset_splitting(self, algo, threshold, min_support):
-        for explanation in split_embedding(self.Xhd, self.Xld, threshold, min_support, algo):
+    def explain_full_dataset_splitting(self, threshold, min_support):
+        for explanation in split_embedding(self.Xhd, self.Xld, threshold, min_support):
             self.scatterplot.add_explanation(explanation)
             self.redraw_things()
 
-    def explain_full_dataset_Kmeans(self, algo, threshold, min_support):
+    def explain_full_dataset_Kmeans(self, threshold, min_support, K):
         from sklearn.cluster import KMeans
-        model = KMeans(n_clusters=15, random_state=0).fit(self.Xld)
+        model = KMeans(n_clusters=K, random_state=0).fit(self.Xld)
         centers = model.cluster_centers_
         labels = model.labels_
         for i in range(centers.shape[0]):
+            print(np.round(float(i/centers.shape[0]),2))
             idxs = np.where(labels == i)[0]
             Nidx = idxs.shape[0]
             if Nidx > min_support:
                 explanation = Local_explanation_wrapper(idxs, self.Xld, self.Xhd, method = 'biot')
                 self.scatterplot.add_explanation(explanation)
 
-    def merge_explanations(self):
-        explanations = self.scatterplot.local_explanations
-        N_expla = len(explanations)
+    def merge_explanations(self, threshold):
 
-        for pass_i in range(10):
+        for pass_i in range(3):
+            explanations = self.scatterplot.local_explanations
+            N_expla = len(explanations)
+            marked = np.zeros((N_expla,), dtype=np.bool)
 
-            for i, expl in enumerate(explanations):
-                pos = expl.center_LD
+            to_remove = []
+            to_add = []
+
+            for i, expl_wrapper in enumerate(explanations):
+                if marked[i]:
+                    continue
+                expl = expl_wrapper.model
+                center1 = expl.center_LD
+                R_1  = expl.R
+                W_1  = expl.W
+                w0_1 = expl.w0
+                sample1 = expl_wrapper.sample_idx
+
                 d = np.zeros(N_expla)
-                for u, expl2 in enumerate(explanations):
-                    d[u] = np.sum((expl2.center_LD - pos)**2)
-                neighbours = np.argsort(d)
+                for u, expl_wrapper2 in enumerate(explanations):
+                    d[u] = np.sum((expl_wrapper2.model.center_LD - center1)**2)
+                neighbours = np.argsort(d)[1:]
 
                 for r, neigh in enumerate(neighbours):
-                    expl2 = explanations[neigh]
+                    if marked[neigh]:
+                        continue
+                    expl2 = explanations[neigh].model
+
+                    center2 = expl2.center_LD
+                    R_2  = expl2.R
+                    W_2  = expl2.W
+                    w0_2 = expl2.w0
+                    sample2 = explanations[neigh].sample_idx
+
+                    full_sample = np.hstack((sample1, sample2))
 
 
-                    ici faire la moyenne entre les deux angles et la moyenne entre les modeles puis checker l'erreur
-                    1/0
+                    mu_R = (R_1 + R_2) / 2
+                    mu_R /= norm(mu_R, axis=1)
+                    mu_w0 = (w0_1 + w0_2) / 2
+                    mu_W  = (W_1 + W_2) / 2
+                    new_center = np.mean(self.Xld[full_sample], axis=0)
 
-    def explain_full_dataset(self, algo='pca', threshold=10., min_support=10):
-        self.explain_full_dataset_splitting(algo=algo, threshold=threshold, min_support=min_support)
+                    new_explanation = Local_explanation_wrapper(full_sample, self.Xld, self.Xhd, method = 'biot', fit=False)
+                    new_explanation.model.center_LD = new_center
+                    new_explanation.model.center_HD = np.mean(self.Xhd[full_sample], axis=0)
+                    new_explanation.model.axis2d = mu_R
+                    new_explanation.model.features_coeffs_ax1 = mu_W[:,0]
+                    new_explanation.model.features_coeffs_ax2 = mu_W[:,1]
+                    new_explanation.model.W = mu_W
+                    new_explanation.model.w0 = mu_w0
+                    new_explanation.model.R = mu_R
+                    new_explanation.sample_idx = full_sample
+                    new_explanation.axis2d = new_explanation.model.axis2d
 
-        self.merge_explanations() # attempt merge avec un mean angle
 
-        print("MULTI BIOT")
-        max_lam = BIOT.calc_max_lam(self.Xhd, self.Xld)
-        n_lam = 10
-        lam_values = max_lam*(10**np.linspace(-1, 0, num=n_lam, endpoint=True, retstep=False, dtype=None))
-        lam_list = lam_values.tolist()
-        initial_clusters = np.zeros(self.Xhd.shape[0], dtype=int)
-        for i, expl in enumerate(self.scatterplot.local_explanations):
-            initial_clusters[expl.sample_idx] = i
-        Yhat, W_list, w0_list, R_list, clusters = Multi_BIOT.CV_Multi_BIOT(
-            X_train = pd.DataFrame(self.Xhd), X_test = pd.DataFrame(self.Xhd), Y_train = pd.DataFrame(self.Xld), lam_list = lam_list,
-            K_list = None, clusters = initial_clusters, rotation = True)
+                    centrd = self.Xhd[full_sample] - new_explanation.model.center_HD
+                    Yhat_new = new_center + ((np.tile(mu_w0, (centrd.shape[0], 1)) + (centrd @ mu_W)) @ mu_R.T)
+                    err = np.mean(np.sqrt(np.mean((Yhat_new - self.Xld[full_sample])**2, axis=1)))
 
-        print(Yhat)
-        print(W_list[0].shape)
-        print(w0_list)
-        print(R_list)
-        print(clusters)
+                    print('err, threshold ', err, threshold)
+                    if err < threshold:
+
+                        marked[i] = True
+                        marked[neigh] = True
+                        to_remove.append(i)
+                        to_remove.append(neigh)
+                        to_add.append(new_explanation)
+                        break
+            import time
+            to_remove = np.sort(np.array(to_remove))
+            for i in range(to_remove.shape[0]):
+                print(to_remove[-1-i])
+                self.scatterplot.delete_explanation(to_remove[-1-i])
+
+            for expl in to_add:
+                self.scatterplot.add_explanation(expl)
+
+            self.redraw_things()
+            time.sleep(1.5)
+        self.redraw_things()
+
+
+    def last_biot(self):
+        explanations = self.scatterplot.local_explanations
+        for i, expl_wrapper in enumerate(explanations):
+            expl_wrapper.model.fit(self.Xld[expl_wrapper.sample_idx], self.Xhd[expl_wrapper.sample_idx])
+            expl_wrapper.axis2d = expl_wrapper.model.axis2d
+        self.redraw_things()
+        print("done")
+
+
+    def explain_full_dataset(self, threshold=10., min_support=10):
+        self.explain_full_dataset_splitting(threshold=threshold, min_support=min_support)
+        # self.explain_full_dataset_Kmeans(threshold=threshold, min_support=min_support, K=10)
+
+        print('todo: réparer merge_explanations(): le "mean model" marche bien, mais il y a un bug à trouver.')
+        # self.merge_explanations(threshold=threshold)
+
+        self.last_biot()
+
+        # print("MULTI BIOT")
+        # import pandas as pd
+        # max_lam = BIOT.calc_max_lam(self.Xhd, self.Xld)
+        # n_lam = 10
+        # lam_values = max_lam*(10**np.linspace(-1, 0, num=n_lam, endpoint=True, retstep=False, dtype=None))
+        # lam_list = lam_values.tolist()
+        # initial_clusters = np.zeros(self.Xhd.shape[0], dtype=int)
+        # for i, expl in enumerate(self.scatterplot.local_explanations):
+        #     initial_clusters[expl.sample_idx] = i
+        # Yhat, W_list, w0_list, R_list, clusters = Multi_BIOT.CV_Multi_BIOT(
+        #     X_train = pd.DataFrame(self.Xhd), X_test = pd.DataFrame(self.Xhd), Y_train = pd.DataFrame(self.Xld), lam_list = lam_list,
+        #     K_list = None, clusters = initial_clusters, rotation = True)
+        #
+        # print(Yhat)
+        # print(W_list[0].shape)
+        # print(w0_list)
+        # print(R_list)
+        # print(clusters)
 
 
     def select_explanation(self, explanation_idx):
