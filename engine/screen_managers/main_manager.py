@@ -127,89 +127,82 @@ class Main_manager(Manager):
                 explanation = Local_explanation_wrapper(idxs, self.Xld, self.Xhd, method = 'biot')
                 self.scatterplot.add_explanation(explanation)
 
+    def merge_try(self, mid, mid_HD, R_3, W_3, w0_3, sample3):
+        new_explanation = Local_explanation_wrapper(sample3, self.Xld, self.Xhd, method = 'biot', fit=False)
+        new_explanation.model.center_LD = mid
+        new_explanation.model.center_HD = mid_HD
+        new_explanation.model.axis2d = R_3
+        new_explanation.model.features_coeffs_ax1 = W_3[:,0]
+        new_explanation.model.features_coeffs_ax2 = W_3[:,1]
+        new_explanation.model.W = W_3
+        new_explanation.model.w0 = w0_3
+        new_explanation.model.R = R_3
+        new_explanation.sample_idx = sample3
+        new_explanation.axis2d = new_explanation.model.axis2d
+
+
+        centrd = self.Xhd[sample3] - new_explanation.model.center_HD
+        Yhat_new = mid + ((np.tile(w0_3, (centrd.shape[0], 1)) + (centrd @ W_3)) @ R_3.T)
+        err = np.mean(np.sqrt(np.mean((Yhat_new - self.Xld[sample3])**2, axis=1)))
+        return new_explanation, err
+
     def merge_explanations(self, threshold):
 
-        for pass_i in range(3):
+        something_happened = True
+        while(something_happened):
+            something_happened = False
+
+            merge1 = -1
+            merge2 = -1
+            new_expl = None
+
             explanations = self.scatterplot.local_explanations
-            N_expla = len(explanations)
-            marked = np.zeros((N_expla,), dtype=np.bool)
+            for i, expl_wrapper1 in enumerate(explanations):
+                expl1 = expl_wrapper1.model
+                center1 = expl1.center_LD
+                center_HD1 = expl1.center_HD
+                R_1  = expl1.R
+                W_1  = expl1.W
+                w0_1 = expl1.w0
+                sample1 = expl_wrapper1.sample_idx
 
-            to_remove = []
-            to_add = []
+                for u in range(i+1, len(explanations)):
 
-            for i, expl_wrapper in enumerate(explanations):
-                if marked[i]:
-                    continue
-                expl = expl_wrapper.model
-                center1 = expl.center_LD
-                R_1  = expl.R
-                W_1  = expl.W
-                w0_1 = expl.w0
-                sample1 = expl_wrapper.sample_idx
-
-                d = np.zeros(N_expla)
-                for u, expl_wrapper2 in enumerate(explanations):
-                    d[u] = np.sum((expl_wrapper2.model.center_LD - center1)**2)
-                neighbours = np.argsort(d)[1:]
-
-                for r, neigh in enumerate(neighbours):
-                    if marked[neigh]:
-                        continue
-                    expl2 = explanations[neigh].model
-
+                    expl2 = explanations[u].model
                     center2 = expl2.center_LD
+                    center_HD2 = expl2.center_HD
                     R_2  = expl2.R
                     W_2  = expl2.W
                     w0_2 = expl2.w0
-                    sample2 = explanations[neigh].sample_idx
+                    sample2 = explanations[u].sample_idx
 
-                    full_sample = np.hstack((sample1, sample2))
+                    mid = 0.5 * (center1 + center2)
+                    mid_HD = 0.5 * (center_HD1 + center_HD2)
+                    R_3  = 0.5 * (R_1 + R_2)
+                    W_3  = 0.5 * (W_1 + W_2)
+                    w0_3  = 0.5 * (w0_1 + w0_2)
+                    sample3 = np.hstack((sample1, sample2))
 
-
-                    mu_R = (R_1 + R_2) / 2
-                    mu_R /= norm(mu_R, axis=1)
-                    mu_w0 = (w0_1 + w0_2) / 2
-                    mu_W  = (W_1 + W_2) / 2
-                    new_center = np.mean(self.Xld[full_sample], axis=0)
-
-                    new_explanation = Local_explanation_wrapper(full_sample, self.Xld, self.Xhd, method = 'biot', fit=False)
-                    new_explanation.model.center_LD = new_center
-                    new_explanation.model.center_HD = np.mean(self.Xhd[full_sample], axis=0)
-                    new_explanation.model.axis2d = mu_R
-                    new_explanation.model.features_coeffs_ax1 = mu_W[:,0]
-                    new_explanation.model.features_coeffs_ax2 = mu_W[:,1]
-                    new_explanation.model.W = mu_W
-                    new_explanation.model.w0 = mu_w0
-                    new_explanation.model.R = mu_R
-                    new_explanation.sample_idx = full_sample
-                    new_explanation.axis2d = new_explanation.model.axis2d
-
-
-                    centrd = self.Xhd[full_sample] - new_explanation.model.center_HD
-                    Yhat_new = new_center + ((np.tile(mu_w0, (centrd.shape[0], 1)) + (centrd @ mu_W)) @ mu_R.T)
-                    err = np.mean(np.sqrt(np.mean((Yhat_new - self.Xld[full_sample])**2, axis=1)))
-
-                    print('err, threshold ', err, threshold)
-                    if err < threshold:
-
-                        marked[i] = True
-                        marked[neigh] = True
-                        to_remove.append(i)
-                        to_remove.append(neigh)
-                        to_add.append(new_explanation)
+                    new_expl_tmp, new_error = self.merge_try(mid, mid_HD, R_3, W_3, w0_3, sample3)
+                    print('err, threshold ', new_error, threshold)
+                    if new_error < threshold:
+                        something_happened = True
+                        merge1 = i
+                        merge2 = u
+                        new_expl = new_expl_tmp
                         break
-            import time
-            to_remove = np.sort(np.array(to_remove))
-            for i in range(to_remove.shape[0]):
-                print(to_remove[-1-i])
-                self.scatterplot.delete_explanation(to_remove[-1-i])
+                if something_happened:
+                    break
 
-            for expl in to_add:
-                self.scatterplot.add_explanation(expl)
+            if something_happened:
+                if i == u:
+                    1/0
+                self.scatterplot.delete_explanation_number(max(i, u))
+                self.scatterplot.delete_explanation_number(min(i, u))
+                self.scatterplot.add_explanation(new_expl)
+                self.redraw_things()
+                print("\n MERGED \n")
 
-            self.redraw_things()
-            time.sleep(1.5)
-        self.redraw_things()
 
 
     def last_biot(self):
@@ -218,17 +211,16 @@ class Main_manager(Manager):
             expl_wrapper.model.fit(self.Xld[expl_wrapper.sample_idx], self.Xhd[expl_wrapper.sample_idx])
             expl_wrapper.axis2d = expl_wrapper.model.axis2d
         self.redraw_things()
-        print("done")
+
+    def explain_full_dataset(self, partition_method, threshold=10., min_support=10, Kmeans_K=10):
+        if partition_method == "kmeans":
+            self.explain_full_dataset_Kmeans(threshold=threshold, min_support=min_support, K=Kmeans_K)
+        else:
+            self.explain_full_dataset_splitting(threshold=threshold, min_support=min_support)
+            self.merge_explanations(threshold=threshold)  # meh
 
 
-    def explain_full_dataset(self, threshold=10., min_support=10):
-        # self.explain_full_dataset_splitting(threshold=threshold, min_support=min_support)
-        self.explain_full_dataset_Kmeans(threshold=threshold, min_support=min_support, K=10)
 
-        print('todo: réparer merge_explanations(): le "mean model" marche bien, mais il y a un bug à trouver.')
-        # self.merge_explanations(threshold=threshold)
-
-        self.last_biot()
 
         # print("MULTI BIOT")
         # import pandas as pd

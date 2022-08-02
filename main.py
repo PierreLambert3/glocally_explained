@@ -19,7 +19,7 @@ def get_all_data(dataset_name):
     elif dataset_name == 'winequality':
         Xhd, Y, feature_names = get_winequality()
     # add your own get_myDataset() function here in a new 'elif'
-    # write get_myDataset() in data_fetchers.py for some examples
+    # write get_myDataset() in data_fetchers.py
     else:
         print('wrong dataset name: '+str(dataset_name)+ ' \n\n\n\n\n\n'); 1/0
     return Xhd, get_Xld(dataset_name, Xhd), Y.astype(np.float), feature_names
@@ -32,23 +32,27 @@ def main():
     run_both(gui_args = "-w" if "-w" in sys.argv else "", worker_function=explain_things, worker_args=worker_args)
 
 
-
-
 def explain_things(dict):
     Xhd, Y, Xld, feature_names = dict['Xhd'], dict['Y'], dict['Xld'], dict['feature_names']
     Y_colours = label_colours(Y)
     Y_colours_expl = np.tile(np.array([213., 60., 245.]), Xld.shape[0]).reshape((Xld.shape[0], 3))
 
+    expl_methods = ['pca', 'biot']
+    expl_method = expl_methods[1]
 
-    methods = ['pca', 'biot']
-    expl_method = methods[1]
-    threshold = 6.5 # try using method = pca for a quick estimation of the threshold then set method = 'biot'
-    min_support = 10 # when partitining the LD space, if |local_sample| < min_support the stop recursive split, even if error(Xld_hat) is under the threshold
+    partition_methods = ['kmeans', '1d split']
+    partition_method = partition_methods[0]
+    min_support = 10 # when partitining the LD space, if |local_sample| < min_support then stop recursive split, even if error(Xld_hat) is under the threshold
+    threshold, Kmeans_K = None, None
+    if partition_method == "1d split":
+        threshold = 6.5  # try using method = pca for a quick estimation of the threshold then set method = 'biot'
+    else:
+        Kmeans_K = 15
 
     event_manager = dict['manager']
     event_manager.receive_dataset(Xhd, Xld, Y, Y_colours, Y_colours_expl, feature_names=feature_names)
     event_manager.method = expl_method
-    event_manager.explain_full_dataset(threshold=threshold, min_support=min_support)
+    event_manager.explain_full_dataset(partition_method=partition_method, threshold=threshold, min_support=min_support)
 
 
 def run_both(gui_args, worker_function, worker_args):
@@ -58,7 +62,6 @@ def run_both(gui_args, worker_function, worker_args):
     worker_thread = threading.Thread(target=worker_function, args=worker_args)
     worker_thread.start()
     gui.routine()
-
 
 
 def make_main_screen(theme, config, uid_generator):

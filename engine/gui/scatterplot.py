@@ -266,6 +266,14 @@ class Explained_scatterplot(Element):
                 iwinner = i
         return iwinner
 
+    def delete_explanation_number(self, idx):
+        if len(self.local_explanations) == 0: return
+        iwinner = idx
+        del self.local_explanations[iwinner]
+        del self.centers_in_px[iwinner]
+        del self.components1_in_px[iwinner]
+        del self.components2_in_px[iwinner]
+
     def delete_explanation(self, pos):
         if len(self.local_explanations) == 0: return
         iwinner = self.closest_explanation(pos)
