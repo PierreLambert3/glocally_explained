@@ -19,8 +19,9 @@ from sklearn.cluster import KMeans
 
 # Import example dataset
 # data = pd.read_csv("country_dataset.csv", index_col = 0)
+data = pd.read_csv("datasets/country_dataset_with_names.csv", index_col = 0)
 # data = pd.read_csv("datasets/airfoil_noise.csv")
-data = np.genfromtxt('datasets/airfoil_noise.csv', delimiter=";", skip_header=1)[:,:-1]
+# data = np.genfromtxt('datasets/airfoil_noise.csv', delimiter=";", skip_header=1)[:,:-1]
 data = pd.DataFrame(data)
 
 # Create t-SNE embedding
@@ -30,6 +31,9 @@ data_norm = sc.fit_transform(data)
 tsne = TSNE(n_components=2, verbose=1, random_state=123, perplexity = perplexity)
 Y = tsne.fit_transform(data_norm) # embedding
 X = data.copy() # features for explaining embedding (i.e. data used to generate embedding)
+
+X = X[:200]
+Y = Y[:200]
 
 # Plot clusters for naive solution (kmeans applied to embedding)
 K = 5
