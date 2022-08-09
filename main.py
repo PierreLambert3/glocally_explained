@@ -12,21 +12,25 @@ from data_fetchers import *
 
 
 def get_all_data(dataset_name):
+    PP = 30
     if dataset_name == 'airfoil':
         Xhd, Y, feature_names = get_airfoil()
     elif dataset_name == 'satellite':
         Xhd, Y, feature_names = get_satellite()
     elif dataset_name == 'winequality':
         Xhd, Y, feature_names = get_winequality()
+    elif dataset_name == 'countries':
+        Xhd, Y, feature_names = get_countries()
+        PP = 10
     # add your own get_myDataset() function here in a new 'elif'
     # write get_myDataset() in data_fetchers.py
     else:
         print('wrong dataset name: '+str(dataset_name)+ ' \n\n\n\n\n\n'); 1/0
-    return Xhd, get_Xld(dataset_name, Xhd), Y.astype(np.float), feature_names
+    return Xhd, get_Xld(dataset_name, Xhd, PP), Y, feature_names
 
 def main():
-    dataset_names = ['airfoil', 'satellite', 'winequality']
-    Xhd, Xld, Y, feature_names= get_all_data(dataset_names[0])
+    dataset_names = ['airfoil', 'satellite', 'winequality', 'countries']
+    Xhd, Xld, Y, feature_names= get_all_data(dataset_names[-1])
 
     worker_args = [{'Xhd':Xhd, 'Y':Y, 'Xld':Xld, 'feature_names': feature_names}]
     run_both(gui_args = "-w" if "-w" in sys.argv else "", worker_function=explain_things, worker_args=worker_args)
@@ -34,8 +38,20 @@ def main():
 
 def explain_things(dict):
     Xhd, Y, Xld, feature_names = dict['Xhd'], dict['Y'], dict['Xld'], dict['feature_names']
-    Y_colours = label_colours(Y)
-    Y_colours_expl = np.tile(np.array([213., 60., 245.]), Xld.shape[0]).reshape((Xld.shape[0], 3))
+    # Y_colours = label_colours(Y)
+    Y_colours = np.tile(np.array([80, 60., 254.]), Xld.shape[0]).reshape((Xld.shape[0], 3))
+    for i, e in enumerate(Y):
+        if e == 0:
+            Y_colours[i, 0] = 240
+            Y_colours[i, 1] = 50
+            Y_colours[i, 2] = 50
+
+
+    # Y_colours_expl = np.tile(np.array([213., 60., 245.]), Xld.shape[0]).reshape((Xld.shape[0], 3))
+
+    Y_colours_expl = Y_colours
+
+
 
     expl_methods = ['pca', 'biot']
     expl_method = expl_methods[1]
@@ -45,14 +61,14 @@ def explain_things(dict):
     min_support = 10 # when partitining the LD space, if |local_sample| < min_support then stop recursive split, even if error(Xld_hat) is under the threshold
     threshold, Kmeans_K = None, None
     if partition_method == "1d split":
-        threshold = 6.5  # try using method = pca for a quick estimation of the threshold then set method = 'biot'
+        threshold = 0.1  # try using method = pca for a quick estimation of the threshold then set method = 'biot'
     else:
-        Kmeans_K = 15
+        Kmeans_K = 10
 
     event_manager = dict['manager']
     event_manager.receive_dataset(Xhd, Xld, Y, Y_colours, Y_colours_expl, feature_names=feature_names)
     event_manager.method = expl_method
-    event_manager.explain_full_dataset(partition_method=partition_method, threshold=threshold, min_support=min_support)
+    event_manager.explain_full_dataset(partition_method=partition_method, threshold=threshold, min_support=min_support, Kmeans_K=Kmeans_K)
 
 
 def run_both(gui_args, worker_function, worker_args):
@@ -72,9 +88,9 @@ def make_main_screen(theme, config, uid_generator):
 
 def make_theme(print_mode):
 	main_theme  = {"background" : np.array([15,0,5]), "color" : np.array([180, 80,10])}
-	if print_mode:
-		main_theme["background"]  = np.array([255,255,255])
-		main_theme["color"]  = luminosity_change(main_theme["color"], -300)
+	# if print_mode:
+	main_theme["background"]  = np.array([255,255,255])
+	main_theme["color"]  = luminosity_change(main_theme["color"], -300)
 	return {"main" : main_theme}
 
 
@@ -118,14 +134,24 @@ def label_colours(Y):
         c1 = np.array([0, 40, 250])
         return (Y*c1[:,None] + (1-Y)*c2[:,None]).T
 
-def get_Xld(dataset_name, Xhd):
+def get_Xld(dataset_name, Xhd, PP=30):
     Xld = None
     try:
+        # 1/0
         Xld = np.load("saved_Xld/"+str(dataset_name)+".npy")
     except:
-        print("no saved embedding found, computing a tSNE embedding and saving it for later...")
-        from sklearn.manifold import TSNE
-        Xld = TSNE(n_components=2, init='pca').fit_transform(Xhd)
+        # print("no saved embedding found, computing a tSNE embedding and saving it for later...")
+        # from sklearn.manifold import TSNE
+        # Xld = TSNE(n_components=2, init='random', perplexity=PP).fit_transform(Xhd)
+        # Xld = TSNE(n_components=2, init='pca', perplexity=PP).fit_transform(Xhd)
+
+        from hybrid import run_hybrid
+        Xld = run_hybrid(Xhd.astype(np.float64), {})
+
+        # Xld[:, 1] /= np.max(Xld[:, 1]) - np.min(Xld[:, 1])
+        # Xld[:, 0] /= np.max(Xld[:, 0]) - np.min(Xld[:, 0])
+        Xld /= np.std(Xld, axis=0)
+
         np.save("saved_Xld/"+str(dataset_name)+".npy", Xld)
     return Xld
 

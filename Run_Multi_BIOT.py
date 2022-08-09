@@ -53,6 +53,7 @@ lam_list = lam_values.tolist()
 #
 # Multi_BIOT.plot_clusters(Y, clusters)
 
+
 K_list = [3]
 ## With initial clusters (cross-validation over candidate values for lambda: lam_list)
 initial_clusters = clusters_init

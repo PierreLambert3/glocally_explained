@@ -11,11 +11,12 @@ from numba import njit
 import Multi_BIOT
 import BIOT
 from scipy.linalg import norm
+import pandas as pd
 
 @njit
-def thoughtfull_name(Xld, colours, orig_colours, errors, err_min, span):
+def thoughtfull_name(Xld, colours, orig_colours, score, score_min, score_max, span):
     for pt in range(Xld.shape[0]):
-        colours[pt] = orig_colours[pt] * (errors[pt]-err_min)/span
+        colours[pt] = orig_colours[pt] + (np.array([254., 254., 254.])-orig_colours[pt])*(1 - (score[pt] - score_min)/span)
 
 class Node():
     def __init__(self, idxs, is_leaf, split_axis, name):
@@ -86,8 +87,38 @@ class Main_manager(Manager):
         self.has_dataset = False
         self.K_select = 150
         self.draw_grid = np.zeros((150, 150), dtype = int)
-
         self.selected_feature = None
+
+    def run_multi_biot(self):
+        # hardcodé pour le dataset countries
+        data = pd.read_csv("datasets/country_dataset_with_names.csv", index_col = 0)
+        X = data.copy()
+        Y = self.Xld
+
+        max_lam = BIOT.calc_max_lam(X, Y)
+        n_lam = 10
+        lam_values = max_lam*(10**np.linspace(-1, 0, num=n_lam, endpoint=True, retstep=False, dtype=None))
+        lam_list = lam_values.tolist()
+
+        N = self.Xhd.shape[0]
+        initial_clusters = np.ones(N, dtype=int)
+        N_explanations = len(self.scatterplot.local_explanations)
+        for i in range(N_explanations):
+            expl = self.scatterplot.local_explanations[i]
+            initial_clusters[expl.sample_idx] = i
+        print("initial_clusters   ", initial_clusters)
+
+        print("multi biot")
+        Yhat, W_list, w0_list, R_list, clusters = Multi_BIOT.CV_Multi_BIOT (X_train = X, X_test = X, Y_train = Y, lam_list = lam_list, K_list = None, clusters = initial_clusters, rotation = True)
+
+        while self.scatterplot.local_explanations:
+            self.scatterplot.delete_explanation_number(0)
+
+        clusters = np.array(clusters)
+        N_expl = np.unique(clusters).shape[0]
+        for new_expla_i in range(N_expl):
+            indices = np.where(clusters == new_expla_i)[0]
+            self.scatterplot.add_explanation(Local_explanation_wrapper(indices, self.Xld, self.Xhd, method='biot'))
 
 
     def receive_dataset(self, Xhd, Xld, Y, Y_colours, Y_colours_expl, feature_names=None):
@@ -96,8 +127,8 @@ class Main_manager(Manager):
         self.KDtree_ld = KDTree(Xld, leaf_size=2)
         self.Y = Y
         self.has_dataset = True
-        feature_colours1 = np.tile(np.array((161., 94., 249.)), Xhd.shape[1]).reshape((-1, 3))
-        feature_colours2 = np.tile(np.array((249., 151., 94.)), Xhd.shape[1]).reshape((-1, 3))
+        feature_colours1 = np.tile(np.array([0., 149., 0]), Xhd.shape[1]).reshape((-1, 3))
+        feature_colours2 = np.tile(np.array([149., 11., 14.]), Xhd.shape[1]).reshape((-1, 3))
         if feature_names is None:
             feature_names = ["variable "+str(i) for i in range(Xhd.shape[1])]
         self.scatterplot.set_points(Xld, Y_colours, Y_colours_expl, feature_names)
@@ -212,14 +243,20 @@ class Main_manager(Manager):
             expl_wrapper.axis2d = expl_wrapper.model.axis2d
         self.redraw_things()
 
+
+
     def explain_full_dataset(self, partition_method, threshold=10., min_support=10, Kmeans_K=10):
         if partition_method == "kmeans":
             self.explain_full_dataset_Kmeans(threshold=threshold, min_support=min_support, K=Kmeans_K)
         else:
             self.explain_full_dataset_splitting(threshold=threshold, min_support=min_support)
             self.merge_explanations(threshold=threshold)  # meh
+            self.redraw_things()
 
-
+        # print("multi biot")
+        # self.run_multi_biot()
+        # print("DONE")
+        self.redraw_things()
 
 
         # print("MULTI BIOT")
@@ -254,9 +291,11 @@ class Main_manager(Manager):
 
         colours      = self.scatterplot.Y_colours
         orig_colours = self.scatterplot.orig_Y_colours
-        thoughtfull_name(self.Xld, colours, orig_colours, goodness, score_min, span)
+        thoughtfull_name(self.Xld, colours, orig_colours, goodness, score_min, score_max, span)
 
+        self.ax1_explanation.clear()
         self.ax1_explanation.receive_explanation(explanation, 0)
+        self.ax2_explanation.clear()
         self.ax2_explanation.receive_explanation(explanation, 1)
 
 

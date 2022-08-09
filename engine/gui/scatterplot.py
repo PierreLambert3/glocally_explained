@@ -18,7 +18,6 @@ class Feature_bar_thing(Element):
 
     def draw(self, screen):
         if self.selected:
-            pygame.draw.rect(screen, self.background_color*2, self.bounding_rect, 0)
             pygame.draw.rect(screen, self.background_color, self.bounding_rect, 2)
             pygame.draw.rect(screen, self.color, self.bounding_rect, 1)
         else:
@@ -36,6 +35,12 @@ class Feature_bar_thing(Element):
         p1 = center[0] + (self.coeff/self.maxabs)*(0.4*dim[0]), center[1]
         pygame.draw.line(screen, self.color*0.5, p1, center, 8)
         super(Feature_bar_thing, self).draw(screen)
+        # txt_img = pygame.font.SysFont(None, 14).render(self.name, True, self.color)
+        # img_rect = txt_img.get_rect()
+        # img_rect.top  = center-0.2 * dim[1]*a1
+        # img_rect.left = center-0.2 * dim[0]*a1
+        # pygame.draw.rect(screen, self.background_color, img_rect, 0)
+        # screen.blit(self.txt_img, self.abs_pos)
 
 
 
@@ -67,6 +72,9 @@ class Axis_explained(Element):
         self.features_labels = features_list.copy()
         self.features_colours = features_colours
 
+    def clear(self):
+        self.subthings = []
+
     def receive_explanation(self, explanation, axis_nb):
         self.draw_features = True
         if axis_nb == 0:
@@ -95,6 +103,7 @@ class Axis_explained(Element):
     def select_feature(self, feature_name, left_click=True):
         self.unselect_features()
         for feat in self.subthings:
+            print(feature_name , " selected")
             if feat.name == feature_name:
                 feat.selected = True
 
@@ -174,7 +183,7 @@ class Explained_scatterplot(Element):
         # dot_colours = self.Y_colours_expl
         dot_colours = self.Y_colours
 
-        thickness = 1
+        thickness = 4
         m1 = np.array([0, 1])
         m2 = np.array([1, 0])
         '''
@@ -187,12 +196,24 @@ class Explained_scatterplot(Element):
 
         if self.drawing:
             for i in range(len(self.draw_list)):
-                pygame.draw.circle(screen, (np.array([100,200,100])), self.draw_list[i], thickness)
+                pygame.draw.circle(screen, (np.array([100,240,100])), self.draw_list[i], 1)
+
+        Nexplanations = len(self.local_explanations)
+        selected_idx = -1
+        for i in range(Nexplanations):
+            if i == self.selected_explanation:
+                selected_idx = i
+
+        trump = np.array([160, 60, 0])
+        if selected_idx != -1:
+            sample_idxs = self.local_explanations[selected_idx].sample_idx
+            for idx in sample_idxs:
+                pygame.draw.circle(screen, trump, coord[idx], thickness, 2)
+
 
         '''
         draw the explanations
         '''
-        Nexplanations = len(self.local_explanations)
         sel_idx = -1
         if self.selected_feature is not None and self.feature_names is not None:
             for i in range(len(self.feature_names)):
@@ -201,12 +222,11 @@ class Explained_scatterplot(Element):
 
         center_colour = np.array([161., 94., 249.])
         center_colour2 = np.array([249., 151., 94.])
-        comp1_colour  = np.array([161., 94., 249.])
-        comp2_colour  = np.array([249., 151., 94.])
+        comp1_colour  = np.array([0., 149., 0])
+        comp2_colour  = np.array([149., 11., 14.])
         lavender = np.array([80, 0, 140])
         # lavender = np.array([35, 240, 50])
         a1 = np.array([1., -1.])
-        selected_idx = -1
         for i in range(Nexplanations):
 
             expl = self.local_explanations[i]
@@ -228,7 +248,6 @@ class Explained_scatterplot(Element):
                 pygame.draw.aaline(screen, comp1_colour, center, p1, 4)
                 pygame.draw.aaline(screen, comp2_colour, center, p2, 4)
                 pygame.draw.circle(screen, center_colour2, center, 6)
-                selected_idx = i
             else:
                 pygame.draw.aaline(screen, comp1_colour, center, p1, 2)
                 pygame.draw.aaline(screen, comp2_colour, center, p2, 2)
@@ -237,13 +256,9 @@ class Explained_scatterplot(Element):
             # seleted feature importance
             v1 = (p1 - center) * expl_W1[sel_idx]
             v2 = (p2 - center) * expl_W2[sel_idx]
-            pygame.draw.line(screen, comp1_colour, center, center+v1, 5)
-            pygame.draw.line(screen, comp2_colour, center, center+v2, 5)
+            pygame.draw.line(screen, comp1_colour, center, center+v1, 9)
+            pygame.draw.line(screen, comp2_colour, center, center+v2, 9)
 
-        if selected_idx != -1:
-            sample_idxs = self.local_explanations[selected_idx].sample_idx
-            for idx in sample_idxs:
-                pygame.draw.circle(screen, lavender, coord[idx], 3, 1)
 
 
     def delete(self):
@@ -317,9 +332,16 @@ class Explained_scatterplot(Element):
         ax_px_len = self.x_axis_length*self.dim[0]
         ax1_min, ax2_min = np.min(self.X_LD, axis=0)
         ax1_max, ax2_max = np.max(self.X_LD, axis=0)
+        stds  = np.std(self.X_LD, axis=0)
+        diff1 = (ax1_max - ax1_min)
+        diff2 = (ax2_max - ax2_min)
+        ax1_max += diff1*0.1
+        ax1_min -= diff1*0.1
+        ax2_max += diff2*0.1
+        ax2_min -= diff2*0.1
 
-        ax1_wingspan = ax1_max - ax1_min + 1e-6
-        ax2_wingspan = ax2_max - ax2_min + 1e-6
+        ax1_wingspan = ax1_max - ax1_min
+        ax2_wingspan = ax2_max - ax2_min
         x_offset = self.abs_pos[0] + self.anchor[0]*self.dim[0]
         y_offset = self.abs_pos[1] + self.anchor[1]*self.dim[1]
 
