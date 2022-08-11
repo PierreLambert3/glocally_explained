@@ -35,22 +35,7 @@ class Feature_bar_thing(Element):
         p1 = center[0] + (self.coeff/self.maxabs)*(0.4*dim[0]), center[1]
         pygame.draw.line(screen, self.color*0.5, p1, center, 8)
         super(Feature_bar_thing, self).draw(screen)
-        # txt_img = pygame.font.SysFont(None, 14).render(self.name, True, self.color)
-        # img_rect = txt_img.get_rect()
-        # img_rect.top  = center-0.2 * dim[1]*a1
-        # img_rect.left = center-0.2 * dim[0]*a1
-        # pygame.draw.rect(screen, self.background_color, img_rect, 0)
-        # screen.blit(self.txt_img, self.abs_pos)
 
-
-
-
-        # p1 = self.abs_pos[0], self.abs_pos[1]
-        # p2 = self.abs_pos
-        # print(self.abs_pos)
-        # print(self.parent.abs_pos)
-        # print(" -----")
-        # pygame.draw.line(screen, self.color, p1, p2, 4)
 
 
 class Axis_explained(Element):
@@ -190,10 +175,8 @@ class Explained_scatterplot(Element):
         draw the scatterplot
         '''
         N = self.X_LD_px.shape[0]
-        coord = self.X_LD_px
-        for i in range(N):
-            pygame.draw.circle(screen, dot_colours[i], coord[i], thickness)
 
+        coord = self.X_LD_px
         if self.drawing:
             for i in range(len(self.draw_list)):
                 pygame.draw.circle(screen, (np.array([100,240,100])), self.draw_list[i], 1)
@@ -209,6 +192,10 @@ class Explained_scatterplot(Element):
             sample_idxs = self.local_explanations[selected_idx].sample_idx
             for idx in sample_idxs:
                 pygame.draw.circle(screen, trump, coord[idx], thickness, 2)
+
+        for i in range(N):
+            pygame.draw.circle(screen, dot_colours[i], coord[i], thickness-1)
+
 
 
         '''
@@ -231,14 +218,10 @@ class Explained_scatterplot(Element):
 
             expl = self.local_explanations[i]
             expl_W1, expl_W2 = expl.get_features_coeff()
-            expl_W1 = np.abs(expl_W1) / np.sum(np.abs(expl_W1))
-            expl_W2 = np.abs(expl_W2) / np.sum(np.abs(expl_W2))
-
-
-
+            expl_W1 = np.abs(expl_W1) / max(1e-9, np.sum(np.abs(expl_W1)))
+            expl_W2 = np.abs(expl_W2) / max(1e-9, np.sum(np.abs(expl_W2)))
             # print(np.round( , 2))
             # print(np.round(np.abs(expl_W2) / np.sum(np.abs(expl_W2)) , 2))
-
             center = self.centers_in_px[i]
             comp1  = self.components1_in_px[i]
             comp2  = self.components2_in_px[i]
@@ -258,8 +241,6 @@ class Explained_scatterplot(Element):
             v2 = (p2 - center) * expl_W2[sel_idx]
             pygame.draw.line(screen, comp1_colour, center, center+v1, 9)
             pygame.draw.line(screen, comp2_colour, center, center+v2, 9)
-
-
 
     def delete(self):
         with self.lock:

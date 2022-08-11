@@ -4,10 +4,8 @@ from numpy.random import uniform, normal, exponential
 from scipy.linalg import norm
 import BIOT
 
-
-
 class Local_explanation_wrapper():
-    def __init__(self, sample_idx, Xld, Xhd, method='pca', fit=True):
+    def __init__(self, sample_idx, Xld, Xhd, method='biot', fit=True):
         if method == 'pca':
             model = Dummy_model()
         else:
@@ -25,14 +23,7 @@ class Local_explanation_wrapper():
 
     def compute_errors(self, Xhd, Xld):
         Xld_hat = self.model.transform(Xhd)
-        errors = np.sqrt(np.mean((Xld_hat - Xld)**2, axis=1))
-
-        print("\nmean error : ", np.mean(errors))
-        try:
-            print("mean error in the sample : ", np.mean(errors[self.sample_idx]) ,"\n\n")
-        except:
-            errors
-
+        errors = np.mean(np.abs(Xld_hat - Xld), axis=1)
         return errors
 
 class Expl_model():
@@ -90,11 +81,28 @@ class BIOT_model(Expl_model):
 
         Xhd_centered = pd.DataFrame(Xhd_centered)
         max_lam = BIOT.calc_max_lam(Xhd_centered, Xld_centered)
+        # max_lam = 0.99
         n_lam = 10
         lam_values = max_lam*(10**np.linspace(-2, 0, num=n_lam, endpoint=True, retstep=False, dtype=None))
         lam_list = lam_values.tolist()
-        Yhat, W, w0, R = BIOT.CV_BIOT(X_train = Xhd_centered, X_test = Xhd_centered, Y_train = Xld_centered, lam_list = lam_list, rotation = True, fit_intercept = False, num_folds=10, random_state = 1, scoring = 'neg_mean_squared_error')
+
+        # higher lamdas = more L1 = more sparsity in explanations at risk of full 0s
+        # max_lam = max(0.3, max_lam)
+        # lam_list = [max_lam]
+        # for i in range(10):
+        #     e = lam_list[-1] * 0.92
+        #     if e > 0.1:
+        #         lam_list.append(e)
+        # print(lam_list)
+        # 1/0
+        # lam_list = [max_lam, 0.5,0.6,0.75]
+        # print(max_lam, " ____")
+        # # lam_list = [max_lam]
+
+        Yhat, W, w0, R = BIOT.CV_BIOT(X_train = Xhd_centered, X_test = Xhd_centered, Y_train = Xld_centered, lam_list = lam_list, rotation = True, fit_intercept = False, num_folds=4, random_state = 1, scoring = 'neg_mean_squared_error')
         W = W.to_numpy()
+
+        print(" \n DONE BIOT \n")
 
         self.W = W
         self.w0 = w0

@@ -16,7 +16,8 @@ import pandas as pd
 @njit
 def thoughtfull_name(Xld, colours, orig_colours, score, score_min, score_max, span):
     for pt in range(Xld.shape[0]):
-        colours[pt] = orig_colours[pt] + (np.array([254., 254., 254.])-orig_colours[pt])*(1 - (score[pt] - score_min)/span)
+        # colours[pt] = orig_colours[pt] + (np.array([220., 220., 220.])-orig_colours[pt])*(1 - (score[pt] - score_min)/span)
+        colours[pt] = orig_colours[pt] * ((score[pt] - score_min)/span)
 
 class Node():
     def __init__(self, idxs, is_leaf, split_axis, name):
@@ -106,10 +107,8 @@ class Main_manager(Manager):
         for i in range(N_explanations):
             expl = self.scatterplot.local_explanations[i]
             initial_clusters[expl.sample_idx] = i
-        print("initial_clusters   ", initial_clusters)
 
-        print("multi biot")
-        Yhat, W_list, w0_list, R_list, clusters = Multi_BIOT.CV_Multi_BIOT (X_train = X, X_test = X, Y_train = Y, lam_list = lam_list, K_list = None, clusters = initial_clusters, rotation = True)
+        Yhat, W_list, w0_list, R_list, clusters = Multi_BIOT.CV_Multi_BIOT (X_train = X, X_test = X, Y_train = Y, lam_list = lam_list, K_list = None, num_folds=4, clusters = initial_clusters, rotation = True)
 
         while self.scatterplot.local_explanations:
             self.scatterplot.delete_explanation_number(0)
@@ -147,7 +146,7 @@ class Main_manager(Manager):
 
     def explain_full_dataset_Kmeans(self, threshold, min_support, K):
         from sklearn.cluster import KMeans
-        model = KMeans(n_clusters=K, random_state=0).fit(self.Xld)
+        model = KMeans(n_clusters=K, init='random', n_init=500, random_state=0).fit(self.Xld)
         centers = model.cluster_centers_
         labels = model.labels_
         for i in range(centers.shape[0]):
@@ -245,37 +244,20 @@ class Main_manager(Manager):
 
 
 
-    def explain_full_dataset(self, partition_method, threshold=10., min_support=10, Kmeans_K=10):
+    def explain_full_dataset(self, partition_method, threshold=10., min_support=10, Kmeans_K=10, multi_biot=True):
         if partition_method == "kmeans":
             self.explain_full_dataset_Kmeans(threshold=threshold, min_support=min_support, K=Kmeans_K)
         else:
             self.explain_full_dataset_splitting(threshold=threshold, min_support=min_support)
             self.merge_explanations(threshold=threshold)  # meh
-            self.redraw_things()
-
-        # print("multi biot")
-        # self.run_multi_biot()
-        # print("DONE")
         self.redraw_things()
 
+        if multi_biot:
+            print("running multi biot...")
+            self.run_multi_biot()
+            print("DONE")
+            self.redraw_things()
 
-        # print("MULTI BIOT")
-        # import pandas as pd
-        # max_lam = BIOT.calc_max_lam(self.Xhd, self.Xld)
-        # n_lam = 10
-        # lam_values = max_lam*(10**np.linspace(-1, 0, num=n_lam, endpoint=True, retstep=False, dtype=None))
-        # lam_list = lam_values.tolist()
-        # initial_clusters = np.zeros(self.Xhd.shape[0], dtype=int)
-        # for i, expl in enumerate(self.scatterplot.local_explanations):
-        #     initial_clusters[expl.sample_idx] = i
-        # Yhat, W_list, w0_list, R_list, clusters = Multi_BIOT.CV_Multi_BIOT(
-        #     X_train = pd.DataFrame(self.Xhd), X_test = pd.DataFrame(self.Xhd), Y_train = pd.DataFrame(self.Xld), lam_list = lam_list,
-        #     K_list = None, clusters = initial_clusters, rotation = True)
-        # print(Yhat)
-        # print(W_list[0].shape)
-        # print(w0_list)
-        # print(R_list)
-        # print(clusters)
 
 
     def select_explanation(self, explanation_idx):
