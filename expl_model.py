@@ -1,3 +1,9 @@
+'''
+author : Pierre Lambert, UCLouvain, 2022
+
+
+licence: Apache2, see licence.txt
+'''
 import numpy as np
 from numpy import mean, std, zeros, ones
 from numpy.random import uniform, normal, exponential

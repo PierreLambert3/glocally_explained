@@ -1,3 +1,10 @@
+'''
+author : Pierre Lambert, UCLouvain, 2022
+
+
+licence: Apache2, see licence.txt
+'''
+
 import numpy as np
 from scipy.stats import zscore
 import pandas as pd

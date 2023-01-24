@@ -1,3 +1,9 @@
+'''
+author : Pierre Lambert, UCLouvain, 2022
+
+
+licence: Apache2, see licence.txt
+'''
 import sys
 import numpy as np
 from scipy.cluster.vq import kmeans2
@@ -67,7 +73,7 @@ def get_gui_config(argv):
                 GPU_feature_sel = line.split('- DL_feature_selection_on_GPU')
                 if len(GPU_feature_sel) > 1:
                     value = GPU_feature_sel[1].split('=')[1].split('#')[0].strip()
-                    boolean = ("True" in value or "true" in value or "1" in value)
+                    boolean = ("True" in value or "true" in value or "1" in value) # so efficient
                     config["DL_feature_selection_on_GPU"] = boolean
 
                 default_N = line.split('- default_N')

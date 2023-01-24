@@ -1,3 +1,9 @@
+'''
+author : Pierre Lambert, UCLouvain, 2022
+
+
+licence: Apache2, see licence.txt
+'''
 import sys, os
 from utils import get_gui_config, luminosity_change
 from engine.gui.shared_variable import Shared_variable
@@ -24,19 +30,19 @@ def get_all_data(dataset_name):
         Xhd, Y, feature_names = get_RNA()
     else:
         print('wrong dataset name: '+str(dataset_name)+ ' \n\n\n\n\n\n'); 1/0
-    return Xhd, get_Xld(dataset_name, Xhd, PP), Y, feature_names
+    return Xhd, compute_Xld(dataset_name, Xhd, PP), Y, feature_names, label_colours(Y)
 
 def main():
     dataset_names = ['airfoil', 'satellite', 'winequality', 'countries', 'RNAseq']
-    Xhd, Xld, Y, feature_names= get_all_data(dataset_names[2])
+    Xhd, Xld, Y, feature_names, colours = get_all_data(dataset_names[2])
 
-    worker_args = [{'Xhd':Xhd, 'Y':Y, 'Xld':Xld, 'feature_names': feature_names}]
+    worker_args = [{'Xhd':Xhd, 'Y':Y, 'Xld':Xld, 'feature_names': feature_names, 'colours':colours}]
     run_both(gui_args = "-w" if "-w" in sys.argv else "", worker_function=explain_things, worker_args=worker_args)
-
 
 def explain_things(dict):
     Xhd, Y, Xld, feature_names = dict['Xhd'], dict['Y'], dict['Xld'], dict['feature_names']
-    Y_colours = np.tile(np.array([80, 60., 254.]), Xld.shape[0]).reshape((Xld.shape[0], 3)) # displayed if no explanation is selected
+    # Y_colours = np.tile(np.array([80, 60., 254.]), Xld.shape[0]).reshape((Xld.shape[0], 3)) # displayed if no explanation is selected
+    Y_colours = dict['colours']
     Y_colours_expl = Y_colours # displayed when an explanation is selected
 
     expl_method = 'biot'
@@ -116,7 +122,7 @@ def label_colours(Y):
         c1 = np.array([0, 40, 250])
         return (Y*c1[:,None] + (1-Y)*c2[:,None]).T
 
-def get_Xld(dataset_name, Xhd, PP=30):
+def compute_Xld(dataset_name, Xhd, PP=30):
     from sklearn.manifold import TSNE
     Xld = TSNE(n_components=2, init='pca', perplexity=PP).fit_transform(Xhd)
     return Xld

@@ -4,6 +4,7 @@
 Created on Thu Jun  2 16:19:23 2022
 
 @author: rmarion
+original code: https://github.com/rebeccamarion/BIOT_Python_Package  (MIT licence)
 """
 
 # Example code for running BIOT
@@ -13,7 +14,7 @@ import pandas as pd
 import numpy as np
 import math
 from sklearn.preprocessing import StandardScaler
-    
+
 ###############################################################################
 
 # Import data
@@ -44,6 +45,6 @@ Yhat, W, w0, R = BIOT.CV_BIOT (X_train = X, X_test = X, Y_train = Y_cent, lam_li
 YR = Y_cent @ R # rotated embedding
 YhatR = Yhat @ R # Lasso predictions for rotated embedding
 
-# counterclockwise rotation angle 
+# counterclockwise rotation angle
 rotation_radians = math.acos(R[0,0])
-rotation_degrees = math.degrees(rotation_radians) 
+rotation_degrees = math.degrees(rotation_radians)
